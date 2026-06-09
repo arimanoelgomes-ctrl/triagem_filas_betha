@@ -125,21 +125,22 @@ Ao final da execução diária, gere obrigatoriamente um arquivo de log em `logs
 - **Nunca** inclua no log dados sensíveis do contribuinte (CPF/CNPJ completos, valores específicos, endereços). Quando necessário citar, anonimize.
 - Os logs são versionados no Git (servem de trilha de auditoria).
 
-## Passo 6: Rascunho de Email para o Coordenador
+## Passo 6: Rascunho de Email Diário Consolidado (apenas na execução da tarde, condicional)
 
-Após gerar o log, crie um **rascunho de email** no Gmail do coordenador via MCP do Gmail, com o resumo desta execução. **Este rascunho é EXCLUSIVO da vertical Arrecadação** — não consolidar com outras verticais (Pessoal tem seu próprio rascunho separado).
+⚠️ **Esta etapa é responsabilidade exclusiva da execução da TARDE (`triagem-monorepo-tarde`).** A execução da manhã NÃO deve criar rascunho de email.
 
-Estrutura sugerida do rascunho:
+Na execução da tarde, **decida se cria o rascunho desta vertical**:
 
-- **Assunto:** `[Triagem Arrecadação] Resumo da execução de YYYY-MM-DD HH:MM`
-- **Para:** o coordenador (Ari)
-- **Corpo:**
-  - Total da fila e quebra (ignorados / postados / sem comentário).
-  - Top 3 chamados comentados com link direto.
-  - Top 3 chamados que merecem atenção mas ficaram sem comentário.
-  - Link para o log completo: `verticais/arrecadacao/logs/<DATA>.md`.
+- **CRIE** se a vertical Arrecadação teve **pelo menos 1 comentário postado** no dia (manhã + tarde, considerando o log do dia inteiro).
+- **NÃO CRIE** se a vertical não teve nenhum comentário postado no dia. Registre no log que o rascunho foi suprimido.
 
-Salvar como rascunho (não enviar). O coordenador revisa e envia manualmente se entender que deve circular pra mais gente.
+Quando criar:
+
+- **Assunto:** `[Triagem Arrecadação] Resumo do dia YYYY-MM-DD`
+- **Para:** `arimanoel.gomes@betha.com.br` (coordenador Ari)
+- **Corpo:** resumo CONSOLIDADO do dia inteiro (manhã + tarde) — totais combinados, top 5 chamados comentados com links e baseline histórico utilizado, top 3 sem comentário que merecem atenção, link para o log completo (`verticais/arrecadacao/logs/<DATA>.md`). Identifique no corpo quais comentários vieram da execução da manhã e quais da tarde.
+
+Salvar como rascunho (não enviar). O coordenador revisa e envia manualmente se entender que deve circular pra mais gente. **Este rascunho é EXCLUSIVO da vertical Arrecadação** — não consolidar com outras verticais (Pessoal e Saúde têm seus próprios rascunhos separados, e Saúde vai para destinatário diferente).
 
 ## Passo 7: Registro do Consumo de Tokens (Auditoria de Custo)
 
@@ -156,6 +157,6 @@ Detalhes operacionais em [`../../scripts/README.md`](../../scripts/README.md).
 3. Analise um por um os restantes (Passo 3), priorizando novos chamados e mudanças relevantes.
 4. Gere o arquivo `outputs/<DATA>_comentarios_para_postar.md` (trilha de auditoria) E poste como nota interna via MCP `add_comment` com `internal: true`. Re-verifique a tag via `get_issue` imediatamente antes de cada postagem individual (idempotência just-in-time).
 5. Gere o log diário em `logs/YYYY-MM-DD.md` (Passo 5).
-6. Crie o rascunho de email no Gmail com o resumo (Passo 6) — **separado por vertical**.
+6. **(Somente na execução da tarde e somente se houve >= 1 comentário no dia)** Crie o rascunho de email no Gmail com o resumo do dia inteiro (Passo 6) — **separado por vertical**.
 7. Fallback: se alguma postagem MCP falhar, o coordenador roda `../../scripts/post_comentarios.js --vertical arrecadacao` para reprocessar pelo arquivo de auditoria (o script é idempotente por chave).
 8. O consumo de tokens é registrado posteriormente via agendamento separado.

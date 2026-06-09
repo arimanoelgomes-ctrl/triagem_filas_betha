@@ -35,21 +35,27 @@ triagem_filas_betha/
     │   ├── docs/                          # Docs específicos da Arrecadação (glossário tributário, ADRs)
     │   ├── logs/                          # Histórico diário (versionado)
     │   └── outputs/                       # Arquivos diários de comentários (ignorados pelo Git)
-    └── pessoal/
-        ├── CLAUDE.md                      # Instruções operacionais
-        ├── docs/                          # Docs específicos do Pessoal (eventos eSocial, jornada)
+    ├── pessoal/
+    │   ├── CLAUDE.md                      # Instruções operacionais
+    │   ├── docs/                          # Docs específicos do Pessoal (eventos eSocial, jornada)
+    │   ├── logs/
+    │   └── outputs/
+    └── saude/
+        ├── CLAUDE.md                      # Instruções operacionais (rascunho de email vai para Maitê)
+        ├── docs/                          # Docs específicos de Saúde (SIGTAP, Datasus, e-SUS APS)
         ├── logs/
         └── outputs/
 ```
 
 ## Verticais cobertas
 
-| Vertical | Produtos abrangidos |
-|----------|---------------------|
-| **arrecadacao** | Tributos, Procuradoria, Gestão Fiscal, e-Nota, Cidadão Web, Livro Eletrônico, Protocolo |
-| **pessoal** | Folha Cloud, eSocial, Minha Folha, Ponto (Cloud), Pontual (Cloud), Recursos Humanos (Cloud) |
+| Vertical | Produtos abrangidos | Destinatário do rascunho de email |
+|----------|---------------------|-----------------------------------|
+| **arrecadacao** | Tributos, Procuradoria, Gestão Fiscal, e-Nota, Cidadão Web, Livro Eletrônico, Protocolo | arimanoel.gomes@betha.com.br (Ari) |
+| **pessoal** | Folha Cloud, eSocial, Minha Folha, Ponto (Cloud), Pontual (Cloud), Recursos Humanos (Cloud) | arimanoel.gomes@betha.com.br (Ari) |
+| **saude** | Sistemas de Saúde Municipal (PEC, e-SUS APS, BPA, RAAS, regulação, agendamento, farmácia, vacinas etc.) | maite.passos@betha.com.br (Maitê) |
 
-Cada vertical tem sua **JQL própria** (definida no `CLAUDE.md` da pasta correspondente) e seu **agendamento próprio** no Cowork.
+Cada vertical tem sua **JQL própria** (definida no `CLAUDE.md` da pasta correspondente) e os 2 agendamentos consolidados (manhã + tarde) processam todas em sequência. **Cada vertical gera seu próprio rascunho de email** — nunca consolidamos rascunhos entre verticais.
 
 ## Regras críticas (aplicam-se a todas as verticais)
 
@@ -93,16 +99,24 @@ Detalhes de cada vertical: `verticais/<nome>/CLAUDE.md`.
 
 ## Operação diária
 
-Os agendamentos rodam automaticamente nos horários configurados no Cowork. Após cada execução, você recebe:
+Os agendamentos rodam automaticamente nos horários configurados no Cowork. **Há 2 execuções por dia útil** (manhã 07:30 e tarde 15:00), e cada uma processa as 3 verticais em sequência.
 
-1. Uma **notificação** do Cowork no canto da tela.
-2. Um **rascunho de email no Gmail** com o resumo daquela execução — **um rascunho separado por vertical**, para você revisar e enviar como achar melhor. Os rascunhos não se misturam entre Arrecadação e Pessoal.
+### Notificações e rascunhos de email
 
-Você pode então:
+- **Manhã:** apenas processa a triagem e gera os logs do dia. **Não cria rascunho de email.**
+- **Tarde:** processa o delta sobre a manhã + **cria um rascunho de email diário consolidado por vertical** (manhã + tarde em um único resumo). **Condicional:** o rascunho só é criado se aquela vertical teve **pelo menos 1 comentário postado** no dia. Se uma vertical não comentou nada hoje, o rascunho dela é suprimido para reduzir ruído na caixa de entrada.
+
+Cada vertical mantém seu **destinatário próprio** (rascunhos NUNCA são consolidados entre verticais):
+
+- Arrecadação e Pessoal → `arimanoel.gomes@betha.com.br` (Ari).
+- Saúde → `maite.passos@betha.com.br` (Maitê).
+
+### O que você pode fazer com os outputs
 
 1. **Verificar visualmente** o log do dia em `verticais/<nome>/logs/<DATA>.md`.
-2. **Conferir os comentários postados** (a IA agora posta direto via MCP `add_comment` com `internal: true`).
+2. **Conferir os comentários postados** (a IA posta direto via MCP `add_comment` com `internal: true`).
 3. **Caso queira reprocessar** algum chamado manualmente, use o `scripts/post_comentarios.js`.
+4. **Revisar e enviar os rascunhos de email** que ficam salvos no Gmail (chega no Drafts, não na caixa de entrada).
 
 ## Atualizações e contribuições
 
