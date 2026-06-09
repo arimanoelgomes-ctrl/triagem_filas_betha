@@ -231,8 +231,9 @@ function pickFile() {
     }
     const outputsDir = outputsDirDaVertical(verticalArg);
     if (!fs.existsSync(outputsDir)) {
-        console.error(`Diretorio de outputs nao encontrado para a vertical "${verticalArg}": ${outputsDir}`);
-        process.exit(1);
+        // Cria a pasta vazia se nao existir — primeira execucao do projeto ou apos clone fresco.
+        // Outputs/ esta no .gitignore, entao nao vem pelo clone; precisa ser criada local.
+        fs.mkdirSync(outputsDir, { recursive: true });
     }
     const candidatos = fs.readdirSync(outputsDir)
         .filter((n) => /_comentarios_para_postar\.md$/.test(n))
