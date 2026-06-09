@@ -189,7 +189,10 @@ function outputsDirDaVertical(vertical) {
 // ─── Parsing do arquivo de comentários preparados ───────────────────────────
 function parseComentarios(content) {
     const blocks = [];
-    const headerRe = /^##\s+\d+\.\s+(BTHSC-\d+|[A-Z]+-\d+)\b/gm;
+    // Aceita dois formatos de header:
+    //   ## 1. BTHSC-12345 — ...   (com numeracao)
+    //   ## BTHSC-12345 — ...      (sem numeracao — formato usado pelo agente em algumas execucoes)
+    const headerRe = /^##\s+(?:\d+\.\s+)?(BTHSC-\d+|[A-Z]+-\d+)\b/gm;
     const headers = [];
     let m;
     while ((m = headerRe.exec(content)) !== null) {
