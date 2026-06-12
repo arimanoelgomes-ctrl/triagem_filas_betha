@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Triagem x Eficiência</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f4f6f8; color: #1c2733; }
+  .header { background-color: #1a5276; color: #fff; padding: 18px 24px; }
+  .header h1 { margin: 0; font-size: 20px; }
+  .header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  .toolbar { display: flex; gap: 12px; align-items: center; padding: 14px 24px 0; flex-wrap: wrap; }
+  .toolbar label { font-size: 13px; color: #5d6d7e; }
+  .toolbar select { padding: 6px 10px; border: 1px solid #d5dbdb; border-radius: 6px; font-size: 13px; background: #fff; }
+  #status { font-size: 13px; color: #5d6d7e; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 16px 24px; }
+  .card { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: box-shadow .15s; }
+  .card:hover { box-shadow: 0 2px 10px rgba(26,82,118,.15); }
+  .card.sel { border-color: #1a5276; box-shadow: 0 0 0 2px rgba(26,82,118,.25); }
+  .card h3 { margin: 0 0 8px; font-size: 14px; color: #1a5276; }
+  .big { font-size: 26px; font-weight: 700; }
+  .rate-good { color: #1e8449; } .rate-mid { color: #b7950b; } .rate-bad { color: #c0392b; } .rate-na { color: #95a5a6; }
+  .mini { display: flex; gap: 10px; margin-top: 8px; font-size: 12px; color: #5d6d7e; flex-wrap: wrap; }
+  .mini b { color: #1c2733; }
+  .lbl-info { margin-top: 6px; font-size: 11px; color: #7d8a96; }
+  .section { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; margin: 0 24px 18px; padding: 16px; }
+  .section h2 { margin: 0 0 12px; font-size: 15px; color: #1a5276; }
+  .chart-wrap { position: relative; height: 260px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; background: #f4f6f6; border-bottom: 2px solid #d5dbdb; padding: 8px; color: #5d6d7e; font-weight: 600; cursor: pointer; user-select: none; }
+  td { border-bottom: 1px solid #eaeded; padding: 8px; vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+  a { color: #1a5276; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .p-res { background: #e8f6ee; color: #1e8449; }
+  .p-enc { background: #fdf2e3; color: #b7950b; }
+  .p-and { background: #eaf2f8; color: #1a5276; }
+  .p-lbl { background: #1a5276; color: #fff; }
+  .p-prx { background: #eaeded; color: #5d6d7e; }
+  .note { font-size: 12px; color: #5d6d7e; margin: 0 24px 24px; line-height: 1.5; }
+  .err { background: #fdecea; color: #c0392b; padding: 10px 24px; font-size: 13px; display: none; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>Triagem x Eficiência — assertividade da triagem automática</h1>
+  <p>Chamados com comentário da IA (tag IA-TRIAGEM-AUTOMATICA): rótulo dos analistas (IA-UTIL / IA-NAO-UTIL) tem prioridade; sem rótulo, vale o proxy de desfecho</p>
+</div>
+<div class="toolbar">
+  <label>Período (última atualização do chamado):
+    <select id="periodo">
+      <option value="">Tudo</option>
+      <option value="-30d">Últimos 30 dias</option>
+      <option value="-90d">Últimos 90 dias</option>
+    </select>
+  </label>
+  <span id="status">Carregando…</span>
+</div>
+<div class="err" id="err"></div>
+<div class="grid" id="cards"></div>
+<div class="section">
+  <h2>Desfecho dos chamados comentados, por vertical</h2>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+</div>
+<div class="section">
+  <h2>Evolução histórica da taxa de assertividade (snapshots semanais)</h2>
+  <div class="chart-wrap" id="hist-wrap"><canvas id="histChart"></canvas></div>
+  <p id="hist-empty" style="display:none;font-size:13px;color:#5d6d7e;margin:8px 0 0">
+    Ainda sem snapshots — o primeiro ponto aparece após a primeira execução da rotina semanal (segundas-feiras, 08:00).
+    A série completa fica em <code>docs/assertividade/historico.csv</code> no repositório.
+  </p>
+</div>
+<div class="section">
+  <h2 id="tbl-title">Chamados comentados — todas as verticais</h2>
+  <table id="tbl">
+    <thead><tr>
+      <th data-k="key">Chamado</th><th data-k="vertical">Vertical</th><th data-k="summary">Assunto</th>
+      <th data-k="bucket">Desfecho</th><th data-k="fonte">Fonte</th><th data-k="resolution">Resolução</th><th data-k="updated">Atualizado</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<p class="note">
+  <b>Hierarquia de avaliação:</b> (1) <b>Rótulo do analista</b> — <code>IA-UTIL</code> conta como acerto e <code>IA-NAO-UTIL</code> como erro, independentemente do status; (2) <b>Rótulo automático</b> <code>IA-UTIL-AUTO</code> — aplicado pelo snapshot semanal quando a solução final do chamado confirma a sugestão da IA (acerto); (3) sem rótulos, vale o <b>proxy de desfecho</b>:
+  "Resolvido" = encerrado com resolução de sucesso; "Encerrado s/ confirmação" = resolução tipo "Necessidade não confirmada", "Cancelado", "Duplicado" ou "Não solucionado"; "Em andamento" = ainda aberto.
+  A <b>taxa de assertividade</b> = acertos ÷ (acertos + erros), ignorando os em andamento sem rótulo. A coluna Fonte mostra de onde veio cada avaliação.
+  A comparação semântica "sugestão da IA × solução final" é feita pelo snapshot semanal (docs/assertividade/). Clique num cartão para filtrar a tabela.
+</p>
+<script>
+const VERTICAIS = [
+  { id: 'arrecadacao', nome: 'Arrecadação', jql: 'Vertical in (Arrecadação, ISS)' },
+  { id: 'pessoal', nome: 'Pessoal', jql: 'Vertical in (Pessoal)' },
+  { id: 'saude', nome: 'Saúde', jql: 'Vertical = Saúde' },
+  { id: 'contabil', nome: 'Contábil', jql: 'Vertical in (Contábil)' },
+  { id: 'compras_contratos', nome: 'Compras/Contratos', jql: 'Vertical in (Contratos)' },
+];
+const RES_RUIM = ['necessidade não confirmada', 'cancelado', 'duplicado', 'não solucionado', 'nao solucionado'];
+/*HISTORICO_INICIO*/
+// Alimentado automaticamente pelo snapshot semanal (triagem-assertividade-semanal) a partir do historico.csv.
+// Formato: { data: 'YYYY-MM-DD', vertical: '<id>', taxa: <numero|null> }
+const HISTORICO = [];
+/*HISTORICO_FIM*/
+const JIRA = 'https://atendimento.betha.com.br/browse/';
+let DATA = {}; let chart = null; let selVert = null; let sortK = 'updated'; let sortAsc = false;
+
+function parseResp(r) {
+  if (r.isError) throw new Error((r.content && r.content[0] && r.content[0].text) || 'Erro MCP');
+  if (r.structuredContent) return r.structuredContent;
+  return JSON.parse(r.content[0].text);
+}
+async function fetchVertical(v, periodo) {
+  let jql = 'comment ~ "IA-TRIAGEM-AUTOMATICA" AND ' + v.jql;
+  if (periodo) jql += ' AND updated >= ' + periodo;
+  let startAt = 0, issues = [], total = 0;
+  do {
+    const r = await window.cowork.callMcpTool('mcp__jira-atendimento__search_issues', {
+      jql, maxResults: 100, startAt, response_format: 'detailed', extraFields: ['resolution', 'labels']
+    });
+    const d = parseResp(r);
+    issues = issues.concat(d.issues || []);
+    total = d.total || issues.length;
+    startAt += 100;
+  } while (issues.length < total && startAt < 500);
+  return issues;
+}
+function classify(i) {
+  const labels = (i.labels || []).map(l => String(l).toUpperCase());
+  if (labels.includes('IA-NAO-UTIL')) return { b: 'enc', f: 'rotulo' };
+  if (labels.includes('IA-UTIL')) return { b: 'res', f: 'rotulo' };
+  if (labels.includes('IA-UTIL-AUTO')) return { b: 'res', f: 'auto' };
+  if (i.statusCategory === 'Done') {
+    const rn = ((i.resolution && i.resolution.name) || '').toLowerCase();
+    return { b: RES_RUIM.some(x => rn.includes(x)) ? 'enc' : 'res', f: 'proxy' };
+  }
+  return { b: 'and', f: 'proxy' };
+}
+function fmtDate(s) { return s ? s.slice(0, 10).split('-').reverse().join('/') : ''; }
+function rateClass(p) { return p === null ? 'rate-na' : p >= 70 ? 'rate-good' : p >= 40 ? 'rate-mid' : 'rate-bad'; }
+
+function render() {
+  const cards = document.getElementById('cards'); cards.innerHTML = '';
+  const labels = [], dRes = [], dEnc = [], dAnd = [];
+  for (const v of VERTICAIS) {
+    const list = DATA[v.id] || [];
+    const res = list.filter(i => i._b === 'res').length;
+    const enc = list.filter(i => i._b === 'enc').length;
+    const and = list.filter(i => i._b === 'and').length;
+    const nLbl = list.filter(i => i._f === 'rotulo').length;
+    const nAuto = list.filter(i => i._f === 'auto').length;
+    const closed = res + enc;
+    const rate = closed ? Math.round(res / closed * 100) : null;
+    labels.push(v.nome); dRes.push(res); dEnc.push(enc); dAnd.push(and);
+    const c = document.createElement('div');
+    c.className = 'card' + (selVert === v.id ? ' sel' : '');
+    c.innerHTML = '<h3>' + v.nome + '</h3>' +
+      '<div class="big ' + rateClass(rate) + '">' + (rate === null ? '—' : rate + '%') + '</div>' +
+      '<div class="mini"><span>Comentados: <b>' + list.length + '</b></span>' +
+      '<span>Acertos: <b>' + res + '</b></span><span>Erros: <b>' + enc + '</b></span>' +
+      '<span>Em andamento: <b>' + and + '</b></span></div>' +
+      '<div class="lbl-info">' + ((nLbl || nAuto) ? (nLbl + ' por rótulo de analista, ' + nAuto + ' por rótulo automático (IA-UTIL-AUTO), restante por proxy') : 'Nenhum rótulo ainda — tudo por proxy') + '</div>';
+    c.onclick = () => { selVert = (selVert === v.id ? null : v.id); render(); };
+    cards.appendChild(c);
+  }
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Acertos (resolvidos / IA-UTIL)', data: dRes, backgroundColor: '#1e8449' },
+      { label: 'Erros (s/ confirmação / IA-NAO-UTIL)', data: dEnc, backgroundColor: '#b7950b' },
+      { label: 'Em andamento', data: dAnd, backgroundColor: '#85a9c5' },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } } }
+  });
+  let rows = [];
+  for (const v of VERTICAIS) {
+    if (selVert && v.id !== selVert) continue;
+    for (const i of (DATA[v.id] || [])) rows.push({ key: i.key, vertical: v.nome, summary: i.summary,
+      bucket: i._b, fonte: i._f, resolution: (i.resolution && i.resolution.name) || '', updated: i.updated || '', status: i.status });
+  }
+  rows.sort((a, b) => { const x = a[sortK] || '', y = b[sortK] || ''; return (x < y ? -1 : x > y ? 1 : 0) * (sortAsc ? 1 : -1); });
+  document.getElementById('tbl-title').textContent = 'Chamados comentados — ' +
+    (selVert ? VERTICAIS.find(v => v.id === selVert).nome : 'todas as verticais') + ' (' + rows.length + ')';
+  const pill = b => b === 'res' ? '<span class="pill p-res">Acerto</span>' :
+    b === 'enc' ? '<span class="pill p-enc">Erro</span>' : '<span class="pill p-and">Em andamento</span>';
+  const fpill = f => f === 'rotulo' ? '<span class="pill p-lbl">Rótulo</span>' :
+    f === 'auto' ? '<span class="pill p-lbl" style="background:#5d6d7e">Rótulo auto</span>' : '<span class="pill p-prx">Proxy</span>';
+  document.querySelector('#tbl tbody').innerHTML = rows.map(r =>
+    '<tr><td><a href="' + JIRA + r.key + '" target="_blank">' + r.key + '</a></td><td>' + r.vertical + '</td>' +
+    '<td>' + (r.summary || '').replace(/</g, '&lt;') + '</td><td>' + pill(r.bucket) +
+    '<div style="font-size:11px;color:#5d6d7e">' + r.status + '</div></td><td>' + fpill(r.fonte) + '</td>' +
+    '<td>' + r.resolution + '</td><td>' + fmtDate(r.updated) + '</td></tr>').join('');
+}
+document.querySelectorAll('th').forEach(th => th.onclick = () => {
+  const k = th.dataset.k; if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; } render();
+});
+async function load() {
+  if (!window.cowork || !window.cowork.callMcpTool) {
+    const el = document.getElementById('err');
+    el.innerHTML = '<b>Este painel só funciona dentro do Cowork (Claude Desktop).</b> Abrir o arquivo direto no navegador não conecta ao Jira. ' +
+      'Para instalar: abra o Cowork, anexe este arquivo HTML na conversa e peça ao Claude: ' +
+      '"Crie um artifact com o HTM
