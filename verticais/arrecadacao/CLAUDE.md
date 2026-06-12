@@ -81,6 +81,19 @@ Para os chamados que passarem no filtro do Passo 2, realize o seguinte processo:
 4. **Filtro obrigatório de qualidade:** Considere apenas chamados históricos que já estejam **Resolvidos/Fechados** E cuja solução tenha sido explicitamente **"Aprovada pelo cliente"** ou **"Confirmada"**.
 5. **Otimização:** leia o último arquivo `logs/YYYY-MM-DD.md` (dentro desta pasta da vertical) para identificar quais chamados já foram analisados em execuções anteriores sem que tenham mudado significativamente de contexto. Para chamados antigos sem mudança relevante, mantenha o motivo "sem comentário" do log anterior sem refazer a análise. Foque seu esforço nos chamados **novos** ou nos que tiveram **mudança relevante** desde a última execução.
 
+### Passo 3.1: Cruzamento de Chamados com o Backlog de Desenvolvimento (incluído em 2026-06-11)
+
+O cruzamento vale para **todos os chamados analisados da fila** (qualquer tipo e status — Dúvida, Melhoria, Incidente; aguardando triagem, em triagem, N2 etc.), e não apenas melhorias reprovadas. A motivação: um chamado em aberto pode já ter Característica, Story ou melhoria correspondente cadastrada no desenvolvimento — saber disso antecipa a resposta ao cliente e evita retrabalho de análise.
+
+1. Para cada chamado analisado no Passo 3 (os que passaram no filtro de idempotência), avalie se a necessidade descrita sugere **funcionalidade de produto** (recurso inexistente, comportamento limitado, validação/parâmetro ausente, sugestão de melhoria implícita). Chamados puramente operacionais (erro de configuração, dúvida de uso com solução histórica) não exigem o cruzamento.
+2. Quando aplicável, busque no MCP `jira-desenv` (projetos correlatos aos produtos da vertical Arrecadação) por **Características ou Stories já cadastradas** que tratem do mesmo assunto (busca full-text por termos do título/descrição do chamado).
+3. Considere correspondência válida apenas quando o tema for claramente o mesmo (mesma funcionalidade/necessidade) — não force associações vagas.
+4. Registre cada correspondência encontrada no **log diário** (seção própria "Chamados x Backlog de Desenvolvimento"), com: chave do chamado, tipo e status dele, chave da Característica/Story no desenvolvimento, status dela (ex.: Não iniciada, Atendida, Em andamento) e responsável se houver.
+5. **Não poste comentário no Jira por causa deste cruzamento** — Característica/Story em backlog não é solução aprovada (regra antialucinação permanece). O destino desta informação é o **log diário** e a **seção dedicada no rascunho de email da tarde** (ver Passo 6). Exceção: se a Story/Característica estiver **Atendida** (já implementada/liberada), ela pode embasar comentário interno normal do Passo 4, citando a chave do item de desenvolvimento como referência.
+6. Se o MCP `jira-desenv` estiver indisponível (erro de autenticação/rede), registre o incidente no log e siga o fluxo normal sem o cruzamento. Atenção: erro 401 seguido de 403 no `jira-desenv` indica bloqueio por CAPTCHA do Jira — um login manual na web destrava.
+
+**Objetivo:** dar visibilidade ao coordenador de que demandas da fila já possuem item correspondente no backlog de desenvolvimento — insumo para priorização, resposta ao cliente e redução de retrabalho.
+
 ## Passo 4: Registro do Comentário Interno com Tag de Identificação
 
 Se você encontrar soluções históricas válidas OU precisar adicionar uma análise sobre leis/regras de negócio, **gere o bloco do comentário no arquivo `outputs/<DATA>_comentarios_para_postar.md`** (como trilha de auditoria) e **poste como nota interna via MCP `add_comment` com `internal: true`** (caminho preferido a partir de 2026-06-01 — fix do MCP validado). Antes de cada postagem individual, re-verifique idempotência consultando `get_issue` com `includeComments: true` (proteção contra race condition entre o snapshot do Passo 2 e a postagem efetiva).
@@ -117,6 +130,7 @@ Ao final da execução diária, gere obrigatoriamente um arquivo de log em `logs
 - Lista dos chamados **ignorados** (com motivo — tipicamente a tag `[#IA-TRIAGEM-AUTOMATICA#]` ou status encerrado).
 - Lista dos chamados com **comentário postado** com referência aos chamados históricos utilizados.
 - Lista dos chamados **analisados sem comentário** e o motivo.
+- Seção **"Chamados x Backlog de Desenvolvimento"** com as correspondências do Passo 3.1 (quando houver).
 - Observações/incidentes relevantes (erros de API, casos limítrofes etc.).
 
 **Regras do log:**
@@ -139,8 +153,17 @@ Quando criar:
 - **Assunto:** `[Triagem Arrecadação] Resumo do dia YYYY-MM-DD`
 - **Para:** `arimanoel.gomes@betha.com.br` (coordenador Ari)
 - **Corpo:** resumo CONSOLIDADO do dia inteiro (manhã + tarde) — totais combinados, top 5 chamados comentados com links e baseline histórico utilizado, top 3 sem comentário que merecem atenção, link para o log completo (`verticais/arrecadacao/logs/<DATA>.md`). Identifique no corpo quais comentários vieram da execução da manhã e quais da tarde.
+- **Seção adicional obrigatória — "Chamados com item já cadastrado no desenvolvimento":** liste os casos identificados no Passo 3.1 (do dia e, se ainda relevantes, de dias anteriores não resolvidos), no formato: chamado (chave + link + tipo + status) → Característica/Story correspondente no jira-desenv (chave + status + responsável). Se nenhum caso foi identificado no dia, omita a seção (não escreva "nenhum caso").
+- **Formato (padrão aprovado pelo coordenador em 2026-06-11):** corpo em **HTML** (`htmlBody` do MCP do Gmail), layout executivo com estilos inline (compatibilidade Gmail): (1) cabeçalho em faixa azul `#1a5276` com nome da vertical e data; (2) linha de 4 cartões de totais (fila / comentados em verde `#1e8449` / sem comentário em âmbar `#b7950b` / ignorados em cinza); (3) tabelas com bordas `#d5dbdb` e cabeçalho `#f4f6f6` para: chamados comentados (colunas Chamado com link, Assunto, Execução com selo verde "Tarde", Baseline histórico) e sem comentário (Chamado, Assunto, Motivo); (4) seção Observações em lista; (5) link para o log e rodapé discreto "gerado automaticamente — revisar antes de circular". Fornecer também `body` em texto simples (resumo de 1 a 2 linhas + link do log) como fallback. Sem emojis. **Restrição de markup (lição de 2026-06-11):** o Gmail descarta a propriedade CSS abreviada `background:` — usar SEMPRE `background-color:` + atributo `bgcolor` nas células, e estruturar o cabeçalho e o container como `<table>`/`<td>` (não `<div>` com fundo). Sem `border-radius` no cabeçalho.
 
-Salvar como rascunho (não enviar). O coordenador revisa e envia manualmente se entender que deve circular pra mais gente. **Este rascunho é EXCLUSIVO da vertical Arrecadação** — não consolidar com outras verticais (Pessoal e Saúde têm seus próprios rascunhos separados, e Saúde vai para destinatário diferente).
+**Envio (atualizado em 2026-06-11 — automação confirmada pelo coordenador):** a conta Gmail do coordenador possui uma **automação que envia automaticamente os rascunhos da triagem** (polling de ~5 minutos). Na prática, **criar o rascunho = enviar o email** — não existe janela de revisão manual. Regras decorrentes:
+
+- A triagem usa SOMENTE `create_draft` — **nunca** ação de envio direto (a automação cuida da entrega).
+- **Máximo 1 rascunho por vertical por dia.** Nunca recriar/atualizar o rascunho do dia (cada recriação gera novo envio — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador.
+- O conteúdo deve estar **final e revisado no momento da criação**.
+- É normal a pasta de rascunhos ficar vazia minutos depois (o rascunho vira email enviado).
+
+**Este rascunho é EXCLUSIVO da vertical Arrecadação** — não consolidar com outras verticais (Pessoal e Saúde têm seus próprios rascunhos separados, e Saúde vai para destinatário diferente).
 
 ## Passo 7: Registro do Consumo de Tokens (Auditoria de Custo)
 
@@ -155,8 +178,9 @@ Detalhes operacionais em [`../../scripts/README.md`](../../scripts/README.md).
 1. Liste a fila com a JQL do Passo 1.
 2. Para cada chamado, filtre os já comentados ou em status encerrado (Passo 2).
 3. Analise um por um os restantes (Passo 3), priorizando novos chamados e mudanças relevantes.
-4. Gere o arquivo `outputs/<DATA>_comentarios_para_postar.md` (trilha de auditoria) E poste como nota interna via MCP `add_comment` com `internal: true`. Re-verifique a tag via `get_issue` imediatamente antes de cada postagem individual (idempotência just-in-time).
-5. Gere o log diário em `logs/YYYY-MM-DD.md` (Passo 5).
-6. **(Somente na execução da tarde e somente se houve >= 1 comentário no dia)** Crie o rascunho de email no Gmail com o resumo do dia inteiro (Passo 6) — **separado por vertical**.
-7. Fallback: se alguma postagem MCP falhar, o coordenador roda `../../scripts/post_comentarios.js --vertical arrecadacao` para reprocessar pelo arquivo de auditoria (o script é idempotente por chave).
-8. O consumo de tokens é registrado posteriormente via agendamento separado.
+4. Cruze os chamados analisados (qualquer tipo/status, quando a necessidade sugerir funcionalidade de produto) com Características/Stories existentes no `jira-desenv` (Passo 3.1) — resultado vai para o log e para o rascunho de email; só embasa comentário no Jira se o item estiver Atendido.
+5. Gere o arquivo `outputs/<DATA>_comentarios_para_postar.md` (trilha de auditoria) E poste como nota interna via MCP `add_comment` com `internal: true`. Re-verifique a tag via `get_issue` imediatamente antes de cada postagem individual (idempotência just-in-time).
+6. Gere o log diário em `logs/YYYY-MM-DD.md` (Passo 5).
+7. **(Somente na execução da tarde e somente se houve >= 1 comentário no dia)** Crie o rascunho de email no Gmail com o resumo do dia inteiro (Passo 6) — **separado por vertical**.
+8. Fallback: se alguma postagem MCP falhar, o coordenador roda `../../scripts/post_comentarios.js --vertical arrecadacao` para reprocessar pelo arquivo de auditoria (o script é idempotente por chave).
+9. O consumo de tokens é registrado posteriormente via agendamento separado.

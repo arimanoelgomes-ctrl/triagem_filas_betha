@@ -79,7 +79,9 @@ Para os chamados que passarem no filtro do Passo 2, realize o seguinte processo:
 4. **Filtro obrigatório de qualidade:** Considere apenas chamados históricos que já estejam **Resolvidos/Fechados** E cuja solução tenha sido explicitamente **"Aprovada pelo cliente"** ou **"Confirmada"**.
 5. **Otimização:** leia o último arquivo `logs/YYYY-MM-DD.md` (dentro desta pasta da vertical) para identificar quais chamados já foram analisados em execuções anteriores sem que tenham mudado significativamente de contexto. Para chamados antigos sem mudança relevante, mantenha o motivo "sem comentário" do log anterior sem refazer a análise. Foque seu esforço nos chamados **novos** ou nos que tiveram **mudança relevante** desde a última execução.
 
-### Passo 3.1: Cruzamento de Chamados com o Backlog de Desenvolvimento (exclusivo da vertical Saúde)
+### Passo 3.1: Cruzamento de Chamados com o Backlog de Desenvolvimento
+
+> Nota: este passo nasceu nesta vertical em 2026-06-11 e, na mesma data, foi estendido a todas as verticais do monorepo.
 
 O cruzamento vale para **todos os chamados analisados da fila** (qualquer tipo e status — Dúvida, Melhoria, Incidente; aguardando triagem, em triagem, N2 etc.), e não apenas melhorias reprovadas. A motivação: um chamado aguardando triagem pode já ter Característica, Story ou melhoria correspondente cadastrada no desenvolvimento — saber disso antecipa a resposta ao cliente e evita retrabalho de análise.
 
@@ -153,8 +155,16 @@ Quando criar:
 - **Para:** `maite.passos@betha.com.br` (Maitê — não o Ari)
 - **Corpo:** resumo CONSOLIDADO do dia inteiro (manhã + tarde) — totais combinados, top 5 chamados comentados com links e baseline histórico utilizado, top 3 sem comentário que merecem atenção, link para o log completo (`verticais/saude/logs/<DATA>.md`). Identifique no corpo quais comentários vieram da execução da manhã e quais da tarde.
 - **Seção adicional obrigatória — "Chamados com item já cadastrado no desenvolvimento":** liste os casos identificados no Passo 3.1 (do dia e, se ainda relevantes, de dias anteriores não resolvidos), no formato: chamado (chave + link + tipo + status) → Característica/Story correspondente no jira-desenv (chave + status + responsável). Inclui tanto melhorias reprovadas/aguardando avaliação quanto chamados de suporte em qualquer status cuja necessidade já tenha item no backlog. Se nenhum caso foi identificado no dia, omita a seção (não escreva "nenhum caso").
+- **Formato (padrão aprovado pelo coordenador em 2026-06-11):** corpo em **HTML** (`htmlBody` do MCP do Gmail), layout executivo com estilos inline (compatibilidade Gmail): (1) cabeçalho em faixa azul `#1a5276` com nome da vertical e data + saudação "Olá, Maitê!"; (2) linha de 4 cartões de totais (fila / comentados em verde `#1e8449` / sem comentário em âmbar `#b7950b` / ignorados em cinza); (3) tabelas com bordas `#d5dbdb` e cabeçalho `#f4f6f6` para: chamados comentados (Chamado com link, Assunto, Execução com selo verde "Tarde", Baseline histórico), "Chamados com item já cadastrado no desenvolvimento" (Chamado + tipo/status, Item no desenvolvimento + responsável, Status/Sugestão) e sem comentário (Chamado, Assunto, Motivo); (4) seção Observações em lista; (5) link para o log e rodapé discreto "gerado automaticamente — revisar antes de circular". Fornecer também `body` em texto simples (resumo de 1 a 2 linhas + link do log) como fallback. Sem emojis. **Restrição de markup (lição de 2026-06-11):** o Gmail descarta a propriedade CSS abreviada `background:` — usar SEMPRE `background-color:` + atributo `bgcolor` nas células, e estruturar o cabeçalho e o container como `<table>`/`<td>` (não `<div>` com fundo). Sem `border-radius` no cabeçalho.
 
-Salvar como rascunho (não enviar). A Maitê revisa e envia manualmente se entender que deve circular pra mais gente. **Este rascunho é EXCLUSIVO da vertical Saúde** — não consolidar com Arrecadação e Pessoal (que vão para o Ari).
+**Envio (atualizado em 2026-06-11 — automação confirmada pelo coordenador):** a conta Gmail do coordenador possui uma **automação que envia automaticamente os rascunhos da triagem** (polling de ~5 minutos). Na prática, **criar o rascunho = enviar o email diretamente à Maitê** — não existe janela de revisão manual. Regras decorrentes (com atenção redobrada nesta vertical, pois o destinatário é um terceiro):
+
+- A triagem usa SOMENTE `create_draft` — **nunca** ação de envio direto (a automação cuida da entrega).
+- **Máximo 1 rascunho por dia.** Nunca recriar/atualizar o rascunho do dia (cada recriação gera novo envio à Maitê — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador.
+- O conteúdo deve estar **final e revisado no momento da criação**.
+- É normal a pasta de rascunhos ficar vazia minutos depois (o rascunho vira email enviado).
+
+**Este rascunho é EXCLUSIVO da vertical Saúde** — não consolidar com Arrecadação e Pessoal (que vão para o Ari).
 
 ## Passo 7: Registro do Consumo de Tokens (Auditoria de Custo)
 

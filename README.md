@@ -40,9 +40,19 @@ triagem_filas_betha/
     │   ├── docs/                          # Docs específicos do Pessoal (eventos eSocial, jornada)
     │   ├── logs/
     │   └── outputs/
-    └── saude/
-        ├── CLAUDE.md                      # Instruções operacionais (rascunho de email vai para Maitê)
-        ├── docs/                          # Docs específicos de Saúde (SIGTAP, Datasus, e-SUS APS)
+    ├── saude/
+    │   ├── CLAUDE.md                      # Instruções operacionais (rascunho de email vai para Maitê)
+    │   ├── docs/                          # Docs específicos de Saúde (SIGTAP, Datasus, e-SUS APS)
+    │   ├── logs/
+    │   └── outputs/
+    ├── contabil/
+    │   ├── CLAUDE.md                      # Instruções operacionais
+    │   ├── docs/                          # Docs específicos do Contábil (PCASP, MSC, e-Sfinge contábil)
+    │   ├── logs/
+    │   └── outputs/
+    └── compras_contratos/
+        ├── CLAUDE.md                      # Instruções operacionais
+        ├── docs/                          # Docs específicos de Compras/Contratos (NLLC, PNCP, TCE-SC)
         ├── logs/
         └── outputs/
 ```
@@ -54,6 +64,8 @@ triagem_filas_betha/
 | **arrecadacao** | Tributos, Procuradoria, Gestão Fiscal, e-Nota, Cidadão Web, Livro Eletrônico, Protocolo | arimanoel.gomes@betha.com.br (Ari) |
 | **pessoal** | Folha Cloud, eSocial, Minha Folha, Ponto (Cloud), Pontual (Cloud), Recursos Humanos (Cloud) | arimanoel.gomes@betha.com.br (Ari) |
 | **saude** | Sistemas de Saúde Municipal (PEC, e-SUS APS, BPA, RAAS, regulação, agendamento, farmácia, vacinas etc.) | maite.passos@betha.com.br (Maitê) |
+| **contabil** | Contábil (Cloud), Planejamento, Tesouraria, Prestação de Contas (e-Sfinge/MSC/SICONFI), Portal do Gestor | arimanoel.gomes@betha.com.br (Ari) |
+| **compras_contratos** | Compras (Cloud), Contratos (Cloud), licitações, PNCP, envio de atos de contratação ao TCE-SC | arimanoel.gomes@betha.com.br (Ari) |
 
 Cada vertical tem sua **JQL própria** (definida no `CLAUDE.md` da pasta correspondente) e os 2 agendamentos consolidados (manhã + tarde) processam todas em sequência. **Cada vertical gera seu próprio rascunho de email** — nunca consolidamos rascunhos entre verticais.
 
@@ -64,8 +76,9 @@ Cada vertical tem sua **JQL própria** (definida no `CLAUDE.md` da pasta corresp
 - Leis, instruções normativas e regras de negócio podem ser buscadas externamente, mas sempre identificadas como tal na seção "Análise Complementar" do comentário.
 - **Sem emojis** fora do BMP no corpo dos comentários (limitação de encoding do Jira da Betha — emojis modernos quebram a API com HTTP 500).
 - **Idempotência reforçada:** chamados com a tag `[#IA-TRIAGEM-AUTOMATICA#]` são pulados; antes de cada postagem, a IA re-verifica via `get_issue` (proteção contra race condition entre execuções).
+- **Cruzamento com o backlog (Passo 3.1, todas as verticais desde 2026-06-11):** chamados cuja necessidade sugere funcionalidade de produto são cruzados com Características/Stories do `jira-desenv`; o resultado vai para o log e para o rascunho de email (comentário no Jira só se o item estiver Atendido).
 
-Detalhamento por vertical: `verticais/arrecadacao/CLAUDE.md`, `verticais/pessoal/CLAUDE.md`.
+Detalhamento por vertical: `verticais/<nome>/CLAUDE.md`.
 
 ## Pré-requisitos
 
@@ -99,7 +112,7 @@ Detalhes de cada vertical: `verticais/<nome>/CLAUDE.md`.
 
 ## Operação diária
 
-Os agendamentos rodam automaticamente nos horários configurados no Cowork. **Há 2 execuções por dia útil** (manhã 07:30 e tarde 15:00), e cada uma processa as 3 verticais em sequência.
+Os agendamentos rodam automaticamente nos horários configurados no Cowork. **Há 2 execuções por dia útil** (manhã 07:30 e tarde 15:00), e cada uma processa as 5 verticais em sequência (arrecadacao, pessoal, saude, contabil, compras_contratos).
 
 ### Notificações e rascunhos de email
 
@@ -108,7 +121,7 @@ Os agendamentos rodam automaticamente nos horários configurados no Cowork. **H�
 
 Cada vertical mantém seu **destinatário próprio** (rascunhos NUNCA são consolidados entre verticais):
 
-- Arrecadação e Pessoal → `arimanoel.gomes@betha.com.br` (Ari).
+- Arrecadação, Pessoal, Contábil e Compras/Contratos → `arimanoel.gomes@betha.com.br` (Ari).
 - Saúde → `maite.passos@betha.com.br` (Maitê).
 
 ### O que você pode fazer com os outputs
