@@ -16,6 +16,7 @@ São dois cliques: abrir o campo Rótulos, digitar o rótulo, salvar. Não é pr
 ## Pontos de atenção
 
 - Grafia exata, em maiúsculas e com hífen: `IA-UTIL` e `IA-NAO-UTIL` (sem acento, sem espaço).
+- **Adicione o rótulo ANTES de fechar o chamado** — depois de fechado, o Jira bloqueia a edição de rótulos.
 - O rótulo é sobre a **utilidade da sugestão da IA**, não sobre a dificuldade do chamado.
 - Se o chamado não recebeu comentário da Triagem Automática, não precisa de rótulo.
 - Vocês podem encontrar chamados com o rótulo **`IA-UTIL-AUTO`** — ele é aplicado automaticamente pela rotina semanal de auditoria quando a solução final do chamado confirma a sugestão da IA. **Não removam** esse rótulo; se discordarem da avaliação automática, basta adicionar `IA-NAO-UTIL`, que o feedback de vocês prevalece.

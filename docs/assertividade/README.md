@@ -1,6 +1,6 @@
-# Assertividade da Triagem — Snapshots Semanais
+# Assertividade da Triagem — Snapshots Diários
 
-Esta pasta guarda a série histórica da análise **Triagem x Eficiência**, gerada toda segunda-feira pelo agendamento `triagem-assertividade-semanal`.
+Esta pasta guarda a série histórica da análise **Triagem x Eficiência**, gerada todo dia útil às 08:00 pelo agendamento `triagem-assertividade-semanal` (nome mantido por histórico; periodicidade alterada para diária em 2026-06-12).
 
 ## Arquivos
 
@@ -17,7 +17,7 @@ Esta pasta guarda a série histórica da análise **Triagem x Eficiência**, ger
 | `resolvidos` | Encerrados (Done) com resolução de sucesso |
 | `encerrados_sem_confirmacao` | Encerrados com "Necessidade não confirmada", "Cancelado", "Duplicado" ou "Não solucionado" |
 | `em_andamento` | Ainda abertos |
-| `taxa_assertividade_pct` | resolvidos ÷ (resolvidos + encerrados_sem_confirmacao) × 100 |
+| `taxa_assertividade_pct` | acertos avaliados ÷ total avaliados × 100 — considera APENAS chamados avaliados (rótulos humanos, IA-UTIL-AUTO e análise semântica: Aderente = acerto; Parcial e Divergente contam no denominador). Encerrar com sucesso sem avaliação NÃO conta como acerto |
 | `aderentes` / `parciais` / `divergentes` | Resultado da análise semântica dos encerrados NA SEMANA: a solução final usou a sugestão da IA? |
 | `label_ia_util` / `label_ia_nao_util` | Chamados com label de feedback manual dos analistas (se o processo de marcação for adotado) |
 
@@ -30,9 +30,11 @@ Esta pasta guarda a série histórica da análise **Triagem x Eficiência**, ger
 
 O painel em tempo real não faz análise semântica (só rótulos > proxy); a comparação de conteúdo é exclusiva do snapshot semanal.
 
-## Rotulagem automática (IA-UTIL-AUTO)
+## Rotulagem automática (IA-UTIL-AUTO) e registro local de avaliados
 
-Quando a análise semântica do snapshot classifica um chamado encerrado como **Aderente** e ele não tem rótulo, o snapshot aplica o label `IA-UTIL-AUTO` no chamado. Isso evita depender só da disciplina manual e marca o chamado como já avaliado (não será reanalisado). Regras: o snapshot **nunca** usa `IA-UTIL`/`IA-NAO-UTIL` (exclusivos dos analistas), nunca remove labels e nunca posta comentários. Casos Parcial/Divergente não recebem rótulo — ficam só no relatório. Se um analista discordar de um `IA-UTIL-AUTO`, basta adicionar `IA-NAO-UTIL` — o rótulo humano prevalece.
+Quando a análise semântica do snapshot classifica um chamado encerrado como **Aderente** e ele não tem rótulo, o snapshot **tenta** aplicar o label `IA-UTIL-AUTO`. **Limitação investigada em 2026-06-12:** em chamados Fechados, os dois caminhos da API retornam HTTP 400 (`add_labels` e `update_issue` com operação atômica `labels add`) — o workflow bloqueia edição pós-fechamento. A interface web tem o botão **"Alterar Rótulo"**, que permite editar rótulos em chamados fechados, mas ele é uma ação de tela customizada que **não aparece na API** (`get_transitions` só expõe "Ajuste de informações") — ou seja, funciona para analistas, não para integração. Solicitação aberta ao time de administração do Jira/MCP (ver `solicitacao_rotulo_api.md`). Enquanto isso, o controle de "já avaliado" NÃO depende do rótulo: a fonte de verdade é o **`avaliados.csv`** desta pasta (chamado, vertical, data, classificação, se o rótulo foi aplicado).
+
+Regras: o snapshot **nunca** usa `IA-UTIL`/`IA-NAO-UTIL` (exclusivos dos analistas), nunca remove labels e nunca posta comentários. Casos Parcial/Divergente não recebem rótulo — ficam no relatório e no `avaliados.csv`. Se um analista discordar de uma avaliação automática, basta adicionar `IA-NAO-UTIL` — o rótulo humano prevalece. Para o analista, o ideal é rotular **antes** de fechar o chamado, único momento em que o label é editável.
 
 ## Análise de aderência (semântica)
 

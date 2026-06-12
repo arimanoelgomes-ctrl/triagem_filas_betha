@@ -16,7 +16,7 @@
   .toolbar label { font-size: 13px; color: #5d6d7e; }
   .toolbar select { padding: 6px 10px; border: 1px solid #d5dbdb; border-radius: 6px; font-size: 13px; background: #fff; }
   #status { font-size: 13px; color: #5d6d7e; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 16px 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; padding: 16px 24px; }
   .card { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: box-shadow .15s; }
   .card:hover { box-shadow: 0 2px 10px rgba(26,82,118,.15); }
   .card.sel { border-color: #1a5276; box-shadow: 0 0 0 2px rgba(26,82,118,.25); }
@@ -36,9 +36,13 @@
   a { color: #1a5276; }
   .pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; white-space: nowrap; }
   .p-res { background: #e8f6ee; color: #1e8449; }
-  .p-enc { background: #fdf2e3; color: #b7950b; }
+  .p-par { background: #fdf2e3; color: #b7950b; }
+  .p-enc { background: #fdecea; color: #c0392b; }
+  .p-pend { background: #eaeded; color: #5d6d7e; }
   .p-and { background: #eaf2f8; color: #1a5276; }
   .p-lbl { background: #1a5276; color: #fff; }
+  .p-auto { background: #5d6d7e; color: #fff; }
+  .p-sem { background: #7d3c98; color: #fff; }
   .p-prx { background: #eaeded; color: #5d6d7e; }
   .note { font-size: 12px; color: #5d6d7e; margin: 0 24px 24px; line-height: 1.5; }
   .err { background: #fdecea; color: #c0392b; padding: 10px 24px; font-size: 13px; display: none; }
@@ -47,7 +51,7 @@
 <body>
 <div class="header">
   <h1>Triagem x Eficiência — assertividade da triagem automática</h1>
-  <p>Chamados com comentário da IA (tag IA-TRIAGEM-AUTOMATICA): rótulo dos analistas (IA-UTIL / IA-NAO-UTIL) tem prioridade; sem rótulo, vale o proxy de desfecho</p>
+  <p>Chamados com comentário da IA (tag IA-TRIAGEM-AUTOMATICA). Fontes de avaliação, em ordem: rótulo do analista, rótulo automático, análise semântica semanal (sugestão da IA x solução final), proxy de desfecho</p>
 </div>
 <div class="toolbar">
   <label>Período (última atualização do chamado):
@@ -66,10 +70,10 @@
   <div class="chart-wrap"><canvas id="chart"></canvas></div>
 </div>
 <div class="section">
-  <h2>Evolução histórica da taxa de assertividade (snapshots semanais)</h2>
+  <h2>Evolução histórica da taxa de assertividade (snapshots diários, dias úteis)</h2>
   <div class="chart-wrap" id="hist-wrap"><canvas id="histChart"></canvas></div>
   <p id="hist-empty" style="display:none;font-size:13px;color:#5d6d7e;margin:8px 0 0">
-    Ainda sem snapshots — o primeiro ponto aparece após a primeira execução da rotina semanal (segundas-feiras, 08:00).
+    Ainda sem snapshots — o primeiro ponto aparece após a primeira execução da rotina diária (dias úteis, 08:00).
     A série completa fica em <code>docs/assertividade/historico.csv</code> no repositório.
   </p>
 </div>
@@ -78,16 +82,14 @@
   <table id="tbl">
     <thead><tr>
       <th data-k="key">Chamado</th><th data-k="vertical">Vertical</th><th data-k="summary">Assunto</th>
-      <th data-k="bucket">Desfecho</th><th data-k="fonte">Fonte</th><th data-k="resolution">Resolução</th><th data-k="updated">Atualizado</th>
+      <th data-k="bucket">Avaliação</th><th data-k="fonte">Fonte</th><th data-k="resolution">Resolução</th><th data-k="updated">Atualizado</th>
     </tr></thead>
     <tbody></tbody>
   </table>
 </div>
 <p class="note">
-  <b>Hierarquia de avaliação:</b> (1) <b>Rótulo do analista</b> — <code>IA-UTIL</code> conta como acerto e <code>IA-NAO-UTIL</code> como erro, independentemente do status; (2) <b>Rótulo automático</b> <code>IA-UTIL-AUTO</code> — aplicado pelo snapshot semanal quando a solução final do chamado confirma a sugestão da IA (acerto); (3) sem rótulos, vale o <b>proxy de desfecho</b>:
-  "Resolvido" = encerrado com resolução de sucesso; "Encerrado s/ confirmação" = resolução tipo "Necessidade não confirmada", "Cancelado", "Duplicado" ou "Não solucionado"; "Em andamento" = ainda aberto.
-  A <b>taxa de assertividade</b> = acertos ÷ (acertos + erros), ignorando os em andamento sem rótulo. A coluna Fonte mostra de onde veio cada avaliação.
-  A comparação semântica "sugestão da IA × solução final" é feita pelo snapshot semanal (docs/assertividade/). Clique num cartão para filtrar a tabela.
+  <b>Hierarquia de avaliação:</b> (1) <b>Rótulo do analista</b> — <code>IA-UTIL</code> = acerto, <code>IA-NAO-UTIL</code> = erro; (2) <b>Rótulo automático</b> <code>IA-UTIL-AUTO</code> = acerto; (3) <b>Análise semântica</b> do snapshot diário (dias úteis), que compara o comentário da IA com a solução final do chamado — Aderente = acerto, Parcial = parcial, Divergente = erro; (4) chamados <b>fechados ainda não avaliados</b> entram como "Aguardando avaliação" (NÃO contam como acerto — o desfecho positivo do chamado, sozinho, não prova que a sugestão da IA foi usada); abertos = "Em andamento".
+  A <b>taxa de assertividade</b> = acertos ÷ (acertos + parciais + erros) — só considera chamados efetivamente avaliados. Os dados da análise semântica são embutidos pelo snapshot diário; entre snapshots, chamados recém-fechados aparecem como "Aguardando avaliação".
 </p>
 <script>
 const VERTICAIS = [
@@ -99,10 +101,28 @@ const VERTICAIS = [
 ];
 const RES_RUIM = ['necessidade não confirmada', 'cancelado', 'duplicado', 'não solucionado', 'nao solucionado'];
 /*HISTORICO_INICIO*/
-// Alimentado automaticamente pelo snapshot semanal (triagem-assertividade-semanal) a partir do historico.csv.
-// Formato: { data: 'YYYY-MM-DD', vertical: '<id>', taxa: <numero|null> }
-const HISTORICO = [];
+// Alimentado automaticamente pelo snapshot semanal a partir do historico.csv.
+const HISTORICO = [
+  { data: '2026-06-12', vertical: 'arrecadacao', taxa: 47 },
+  { data: '2026-06-12', vertical: 'pessoal', taxa: 31 },
+  { data: '2026-06-12', vertical: 'saude', taxa: 100 },
+  { data: '2026-06-12', vertical: 'contabil', taxa: null },
+  { data: '2026-06-12', vertical: 'compras_contratos', taxa: null },
+];
 /*HISTORICO_FIM*/
+/*AVALIADOS_INICIO*/
+// Alimentado automaticamente pelo snapshot semanal a partir do avaliados.csv (análise semântica: sugestão da IA x solução final).
+const AVALIADOS = {
+  'BTHSC-324308': 'Parcial', 'BTHSC-323959': 'Aderente', 'BTHSC-320159': 'Parcial', 'BTHSC-324750': 'Aderente',
+  'BTHSC-323166': 'Parcial', 'BTHSC-323739': 'Parcial', 'BTHSC-323601': 'Aderente', 'BTHSC-324485': 'Parcial',
+  'BTHSC-324528': 'Parcial', 'BTHSC-323417': 'Parcial', 'BTHSC-324199': 'Aderente', 'BTHSC-323179': 'Aderente',
+  'BTHSC-322157': 'Divergente', 'BTHSC-323611': 'Parcial', 'BTHSC-319676': 'Aderente', 'BTHSC-320433': 'Aderente',
+  'BTHSC-322087': 'Aderente', 'BTHSC-323724': 'Parcial', 'BTHSC-323705': 'Aderente', 'BTHSC-320148': 'Parcial',
+  'BTHSC-322580': 'Parcial', 'BTHSC-319946': 'Aderente', 'BTHSC-323565': 'Aderente', 'BTHSC-310077': 'Aderente',
+  'BTHSC-322944': 'Parcial', 'BTHSC-322743': 'Parcial', 'BTHSC-321284': 'Parcial', 'BTHSC-322714': 'Parcial',
+  'BTHSC-319068': 'Parcial', 'ASISI-101459': 'Aderente',
+};
+/*AVALIADOS_FIM*/
 const JIRA = 'https://atendimento.betha.com.br/browse/';
 let DATA = {}; let chart = null; let selVert = null; let sortK = 'updated'; let sortAsc = false;
 
@@ -131,9 +151,11 @@ function classify(i) {
   if (labels.includes('IA-NAO-UTIL')) return { b: 'enc', f: 'rotulo' };
   if (labels.includes('IA-UTIL')) return { b: 'res', f: 'rotulo' };
   if (labels.includes('IA-UTIL-AUTO')) return { b: 'res', f: 'auto' };
+  const av = AVALIADOS[i.key];
+  if (av) return { b: av === 'Aderente' ? 'res' : av === 'Parcial' ? 'par' : 'enc', f: 'sem' };
   if (i.statusCategory === 'Done') {
     const rn = ((i.resolution && i.resolution.name) || '').toLowerCase();
-    return { b: RES_RUIM.some(x => rn.includes(x)) ? 'enc' : 'res', f: 'proxy' };
+    return RES_RUIM.some(x => rn.includes(x)) ? { b: 'enc', f: 'proxy' } : { b: 'pend', f: 'proxy' };
   }
   return { b: 'and', f: 'proxy' };
 }
@@ -142,25 +164,22 @@ function rateClass(p) { return p === null ? 'rate-na' : p >= 70 ? 'rate-good' : 
 
 function render() {
   const cards = document.getElementById('cards'); cards.innerHTML = '';
-  const labels = [], dRes = [], dEnc = [], dAnd = [];
+  const labels = [], dRes = [], dPar = [], dEnc = [], dPend = [], dAnd = [];
   for (const v of VERTICAIS) {
     const list = DATA[v.id] || [];
-    const res = list.filter(i => i._b === 'res').length;
-    const enc = list.filter(i => i._b === 'enc').length;
-    const and = list.filter(i => i._b === 'and').length;
-    const nLbl = list.filter(i => i._f === 'rotulo').length;
-    const nAuto = list.filter(i => i._f === 'auto').length;
-    const closed = res + enc;
-    const rate = closed ? Math.round(res / closed * 100) : null;
-    labels.push(v.nome); dRes.push(res); dEnc.push(enc); dAnd.push(and);
+    const n = b => list.filter(i => i._b === b).length;
+    const res = n('res'), par = n('par'), enc = n('enc'), pend = n('pend'), and = n('and');
+    const aval = res + par + enc;
+    const rate = aval ? Math.round(res / aval * 100) : null;
+    labels.push(v.nome); dRes.push(res); dPar.push(par); dEnc.push(enc); dPend.push(pend); dAnd.push(and);
     const c = document.createElement('div');
     c.className = 'card' + (selVert === v.id ? ' sel' : '');
     c.innerHTML = '<h3>' + v.nome + '</h3>' +
       '<div class="big ' + rateClass(rate) + '">' + (rate === null ? '—' : rate + '%') + '</div>' +
       '<div class="mini"><span>Comentados: <b>' + list.length + '</b></span>' +
-      '<span>Acertos: <b>' + res + '</b></span><span>Erros: <b>' + enc + '</b></span>' +
-      '<span>Em andamento: <b>' + and + '</b></span></div>' +
-      '<div class="lbl-info">' + ((nLbl || nAuto) ? (nLbl + ' por rótulo de analista, ' + nAuto + ' por rótulo automático (IA-UTIL-AUTO), restante por proxy') : 'Nenhum rótulo ainda — tudo por proxy') + '</div>';
+      '<span>Acertos: <b>' + res + '</b></span><span>Parciais: <b>' + par + '</b></span><span>Erros: <b>' + enc + '</b></span>' +
+      '<span>Aguard. avaliação: <b>' + pend + '</b></span><span>Em andamento: <b>' + and + '</b></span></div>' +
+      '<div class="lbl-info">Taxa calculada sobre ' + aval + ' avaliado(s) (rótulos + análise semântica)</div>';
     c.onclick = () => { selVert = (selVert === v.id ? null : v.id); render(); };
     cards.appendChild(c);
   }
@@ -168,8 +187,10 @@ function render() {
   chart = new Chart(document.getElementById('chart'), {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Acertos (resolvidos / IA-UTIL)', data: dRes, backgroundColor: '#1e8449' },
-      { label: 'Erros (s/ confirmação / IA-NAO-UTIL)', data: dEnc, backgroundColor: '#b7950b' },
+      { label: 'Acertos', data: dRes, backgroundColor: '#1e8449' },
+      { label: 'Parciais', data: dPar, backgroundColor: '#b7950b' },
+      { label: 'Erros', data: dEnc, backgroundColor: '#c0392b' },
+      { label: 'Aguardando avaliação', data: dPend, backgroundColor: '#aab7b8' },
       { label: 'Em andamento', data: dAnd, backgroundColor: '#85a9c5' },
     ]},
     options: { responsive: true, maintainAspectRatio: false,
@@ -185,14 +206,37 @@ function render() {
   document.getElementById('tbl-title').textContent = 'Chamados comentados — ' +
     (selVert ? VERTICAIS.find(v => v.id === selVert).nome : 'todas as verticais') + ' (' + rows.length + ')';
   const pill = b => b === 'res' ? '<span class="pill p-res">Acerto</span>' :
-    b === 'enc' ? '<span class="pill p-enc">Erro</span>' : '<span class="pill p-and">Em andamento</span>';
+    b === 'par' ? '<span class="pill p-par">Parcial</span>' :
+    b === 'enc' ? '<span class="pill p-enc">Erro</span>' :
+    b === 'pend' ? '<span class="pill p-pend">Aguardando avaliação</span>' : '<span class="pill p-and">Em andamento</span>';
   const fpill = f => f === 'rotulo' ? '<span class="pill p-lbl">Rótulo</span>' :
-    f === 'auto' ? '<span class="pill p-lbl" style="background:#5d6d7e">Rótulo auto</span>' : '<span class="pill p-prx">Proxy</span>';
+    f === 'auto' ? '<span class="pill p-auto">Rótulo auto</span>' :
+    f === 'sem' ? '<span class="pill p-sem">Semântica</span>' : '<span class="pill p-prx">Proxy</span>';
   document.querySelector('#tbl tbody').innerHTML = rows.map(r =>
     '<tr><td><a href="' + JIRA + r.key + '" target="_blank">' + r.key + '</a></td><td>' + r.vertical + '</td>' +
     '<td>' + (r.summary || '').replace(/</g, '&lt;') + '</td><td>' + pill(r.bucket) +
     '<div style="font-size:11px;color:#5d6d7e">' + r.status + '</div></td><td>' + fpill(r.fonte) + '</td>' +
     '<td>' + r.resolution + '</td><td>' + fmtDate(r.updated) + '</td></tr>').join('');
+}
+function renderHistorico() {
+  const datas = [...new Set(HISTORICO.map(h => h.data))].sort();
+  if (!datas.length) {
+    document.getElementById('hist-wrap').style.display = 'none';
+    document.getElementById('hist-empty').style.display = 'block';
+    return;
+  }
+  const cores = { arrecadacao: '#1a5276', pessoal: '#1e8449', saude: '#b7950b', contabil: '#7d3c98', compras_contratos: '#c0392b' };
+  const ds = VERTICAIS.map(v => ({
+    label: v.nome,
+    data: datas.map(d => { const h = HISTORICO.find(x => x.data === d && x.vertical === v.id); return h ? h.taxa : null; }),
+    borderColor: cores[v.id], backgroundColor: cores[v.id], spanGaps: true, tension: .2
+  }));
+  new Chart(document.getElementById('histChart'), {
+    type: 'line',
+    data: { labels: datas.map(d => d.split('-').reverse().join('/')), datasets: ds },
+    options: { responsive: true, maintainAspectRatio: false,
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+  });
 }
 document.querySelectorAll('th').forEach(th => th.onclick = () => {
   const k = th.dataset.k; if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; } render();
@@ -202,4 +246,37 @@ async function load() {
     const el = document.getElementById('err');
     el.innerHTML = '<b>Este painel só funciona dentro do Cowork (Claude Desktop).</b> Abrir o arquivo direto no navegador não conecta ao Jira. ' +
       'Para instalar: abra o Cowork, anexe este arquivo HTML na conversa e peça ao Claude: ' +
-      '"Crie um artifact com o HTM
+      '"Crie um artifact com o HTML deste arquivo, exatamente como está, com id triagem-x-eficiencia e acesso à ferramenta MCP mcp__jira-atendimento__search_issues". ' +
+      'O painel aparecerá na barra lateral do Cowork. Detalhes: instrucoes_painel_outro_gestor.md.';
+    el.style.display = 'block';
+    document.getElementById('status').textContent = 'Fora do Cowork — sem conexão com o Jira.';
+    render();
+    return;
+  }
+  const periodo = document.getElementById('periodo').value;
+  localStorage.setItem('triagem_periodo', periodo);
+  document.getElementById('status').textContent = 'Consultando o Jira…';
+  document.getElementById('err').style.display = 'none';
+  try {
+    for (const v of VERTICAIS) {
+      document.getElementById('status').textContent = 'Consultando: ' + v.nome + '…';
+      const list = await fetchVertical(v, periodo);
+      list.forEach(i => { const c = classify(i); i._b = c.b; i._f = c.f; });
+      DATA[v.id] = list;
+    }
+    document.getElementById('status').textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR');
+  } catch (e) {
+    const el = document.getElementById('err');
+    el.textContent = 'Erro ao consultar o Jira: ' + e.message + ' — use o botão Reload do painel para tentar de novo.';
+    el.style.display = 'block';
+    document.getElementById('status').textContent = 'Falha na consulta.';
+  }
+  render();
+}
+renderHistorico();
+document.getElementById('periodo').value = localStorage.getItem('triagem_periodo') || '';
+document.getElementById('periodo').onchange = load;
+load();
+</script>
+</body>
+</html>
