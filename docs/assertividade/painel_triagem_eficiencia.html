@@ -10,6 +10,7 @@
   * { box-sizing: border-box; }
   body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif; background: #f4f6f8; color: #1c2733; }
   .header { background-color: #1a5276; color: #fff; padding: 18px 24px; }
+  .header.srv { background-color: #117a65; margin-top: 10px; }
   .header h1 { margin: 0; font-size: 20px; }
   .header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
   .toolbar { display: flex; gap: 12px; align-items: center; padding: 14px 24px 0; flex-wrap: wrap; }
@@ -20,7 +21,10 @@
   .card { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; padding: 14px 16px; cursor: pointer; transition: box-shadow .15s; }
   .card:hover { box-shadow: 0 2px 10px rgba(26,82,118,.15); }
   .card.sel { border-color: #1a5276; box-shadow: 0 0 0 2px rgba(26,82,118,.25); }
+  .card.static { cursor: default; }
+  .card.static:hover { box-shadow: none; }
   .card h3 { margin: 0 0 8px; font-size: 14px; color: #1a5276; }
+  .card.srv h3 { color: #117a65; }
   .big { font-size: 26px; font-weight: 700; }
   .rate-good { color: #1e8449; } .rate-mid { color: #b7950b; } .rate-bad { color: #c0392b; } .rate-na { color: #95a5a6; }
   .mini { display: flex; gap: 10px; margin-top: 8px; font-size: 12px; color: #5d6d7e; flex-wrap: wrap; }
@@ -28,6 +32,7 @@
   .lbl-info { margin-top: 6px; font-size: 11px; color: #7d8a96; }
   .section { background: #fff; border: 1px solid #d5dbdb; border-radius: 10px; margin: 0 24px 18px; padding: 16px; }
   .section h2 { margin: 0 0 12px; font-size: 15px; color: #1a5276; }
+  .section.srv h2 { color: #117a65; }
   .chart-wrap { position: relative; height: 260px; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   th { text-align: left; background: #f4f6f6; border-bottom: 2px solid #d5dbdb; padding: 8px; color: #5d6d7e; font-weight: 600; cursor: pointer; user-select: none; }
@@ -44,8 +49,18 @@
   .p-auto { background: #5d6d7e; color: #fff; }
   .p-sem { background: #7d3c98; color: #fff; }
   .p-prx { background: #eaeded; color: #5d6d7e; }
+  .p-ok { background: #e8f6ee; color: #1e8449; }
+  .p-sub { background: #fdecea; color: #c0392b; }
+  .p-sup { background: #fdf2e3; color: #b7950b; }
   .note { font-size: 12px; color: #5d6d7e; margin: 0 24px 24px; line-height: 1.5; }
   .err { background: #fdecea; color: #c0392b; padding: 10px 24px; font-size: 13px; display: none; }
+  .tabs { display: flex; gap: 4px; padding: 12px 24px 0; border-bottom: 1px solid #d5dbdb; background: #eef2f5; }
+  .tab { padding: 9px 20px; border: 1px solid #d5dbdb; border-bottom: none; border-radius: 8px 8px 0 0; background: #e3e8eb; color: #5d6d7e; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: -1px; }
+  .tab:hover { background: #edf1f3; }
+  .tab.active { background: #fff; color: #1a5276; border-bottom: 1px solid #fff; }
+  .tab.srv.active { color: #117a65; }
+  .tabc { display: none; }
+  .tabc.active { display: block; }
 </style>
 </head>
 <body>
@@ -64,6 +79,11 @@
   <span id="status">Carregando…</span>
 </div>
 <div class="err" id="err"></div>
+<div class="tabs">
+  <div class="tab active" id="tab-btn-suporte" onclick="showTab('suporte')">Suporte</div>
+  <div class="tab srv" id="tab-btn-servicos" onclick="showTab('servicos')">Serviços</div>
+</div>
+<div class="tabc active" id="tab-suporte">
 <div class="grid" id="cards"></div>
 <div class="section">
   <h2>Desfecho dos chamados comentados, por vertical</h2>
@@ -91,6 +111,57 @@
   <b>Hierarquia de avaliação:</b> (1) <b>Rótulo do analista</b> — <code>IA-UTIL</code> = acerto, <code>IA-NAO-UTIL</code> = erro; (2) <b>Rótulo automático</b> <code>IA-UTIL-AUTO</code> = acerto; (3) <b>Análise semântica</b> do snapshot diário (dias úteis), que compara o comentário da IA com a solução final do chamado — Aderente = acerto, Parcial = parcial, Divergente = erro; (4) chamados <b>fechados ainda não avaliados</b> entram como "Aguardando avaliação" (NÃO contam como acerto — o desfecho positivo do chamado, sozinho, não prova que a sugestão da IA foi usada); abertos = "Em andamento".
   A <b>taxa de assertividade</b> = acertos ÷ (acertos + parciais + erros) — só considera chamados efetivamente avaliados. Os dados da análise semântica são embutidos pelo snapshot diário; entre snapshots, chamados recém-fechados aparecem como "Aguardando avaliação".
 </p>
+</div><!-- /tab-suporte -->
+
+<div class="tabc" id="tab-servicos">
+<div class="header srv">
+  <h1>Assertividade dos Serviços — duas visões: escopo e horas</h1>
+  <p>Chamados de serviço com sugestão da IA (tag IA-TRIAGEM-SERVICOS), avaliados SÓ no fechamento (Done). Duas visões independentes: (1) ESCOPO executado x sugerido; (2) HORAS apontadas x estimadas (tolerância ±25%). A taxa composta no topo combina as duas, mas cada visão tem sua própria taxa e evolução.</p>
+</div>
+<div class="grid" id="cards-srv-top"></div>
+
+<div class="header srv" style="background-color:#148f77">
+  <h1 style="font-size:16px">Visão 1 — Escopo (executado x sugerido pela IA)</h1>
+</div>
+<div class="grid" id="cards-srv-escopo"></div>
+<div class="section srv">
+  <h2>Evolução da taxa de escopo (snapshots diários)</h2>
+  <div class="chart-wrap" id="hist-srv-esc-wrap"><canvas id="histSrvEscChart"></canvas></div>
+  <p id="hist-srv-esc-empty" style="display:none;font-size:13px;color:#5d6d7e;margin:8px 0 0">
+    Ainda sem serviços avaliados — o primeiro ponto aparece quando serviços comentados pela IA forem fechados e avaliados pelo snapshot diário.
+    A série completa fica em <code>docs/assertividade/historico_servicos.csv</code>.
+  </p>
+</div>
+
+<div class="header srv" style="background-color:#148f77">
+  <h1 style="font-size:16px">Visão 2 — Horas (apontado x estimado, tolerância ±25%)</h1>
+</div>
+<div class="grid" id="cards-srv-horas"></div>
+<div class="section srv">
+  <h2>Evolução da taxa de horas (snapshots diários)</h2>
+  <div class="chart-wrap" id="hist-srv-hr-wrap"><canvas id="histSrvHrChart"></canvas></div>
+  <p id="hist-srv-hr-empty" style="display:none;font-size:13px;color:#5d6d7e;margin:8px 0 0">
+    Ainda sem serviços avaliados — o primeiro ponto aparece quando serviços comentados pela IA forem fechados e avaliados pelo snapshot diário.
+  </p>
+</div>
+
+<div class="section srv">
+  <h2 id="tbl-srv-title">Serviços com sugestão da IA — detalhe (escopo + horas)</h2>
+  <table id="tbl-srv">
+    <thead><tr>
+      <th data-ks="key">Chamado</th><th data-ks="equipe">Equipe</th><th data-ks="summary">Serviço</th>
+      <th data-ks="bucket">Avaliação</th><th data-ks="escopo">Escopo</th>
+      <th data-ks="est">Estim. (h)</th><th data-ks="real">Apont. (h)</th><th data-ks="desvio">Desvio horas</th><th data-ks="updated">Atualizado</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+<p class="note">
+  <b>Como o serviço é avaliado (só no fechamento):</b> a IA sugere, no comentário, o <b>escopo</b> (campo "Informações para negociação") e as <b>horas estimadas</b> (média ponderada das horas apontadas de serviços semelhantes). Quando o serviço fecha, o snapshot diário compara: <b>Escopo</b> — Aderente / Parcial / Divergente; <b>Horas</b> — apontado (timespent) vs estimado, com tolerância de <b>±25%</b>: dentro da faixa = OK; apontado acima da faixa = <b>Subestimado</b> (risco de prejuízo); abaixo = <b>Superestimado</b>.
+  Sub-escores: escopo (Aderente=1, Parcial=0,5, Divergente=0) e horas (OK=1, Superestimado=0,5, Subestimado=0). <b>Taxa composta</b> = média dos dois sub-escores entre os serviços avaliados. <b>Rótulo da linha:</b> Acerto = escopo Aderente E horas OK; Erro = escopo Divergente OU horas Subestimado; caso contrário Parcial.
+</p>
+</div><!-- /tab-servicos -->
+
 <script>
 const VERTICAIS = [
   { id: 'arrecadacao', nome: 'Arrecadação', jql: 'Vertical in (Arrecadação, ISS)' },
@@ -108,6 +179,11 @@ const HISTORICO = [
   { data: '2026-06-12', vertical: 'saude', taxa: 100 },
   { data: '2026-06-12', vertical: 'contabil', taxa: null },
   { data: '2026-06-12', vertical: 'compras_contratos', taxa: null },
+  { data: '2026-06-15', vertical: 'arrecadacao', taxa: 50.0 },
+  { data: '2026-06-15', vertical: 'pessoal', taxa: 35.7 },
+  { data: '2026-06-15', vertical: 'saude', taxa: 100.0 },
+  { data: '2026-06-15', vertical: 'contabil', taxa: null },
+  { data: '2026-06-15', vertical: 'compras_contratos', taxa: null },
 ];
 /*HISTORICO_FIM*/
 /*AVALIADOS_INICIO*/
@@ -121,10 +197,38 @@ const AVALIADOS = {
   'BTHSC-322580': 'Parcial', 'BTHSC-319946': 'Aderente', 'BTHSC-323565': 'Aderente', 'BTHSC-310077': 'Aderente',
   'BTHSC-322944': 'Parcial', 'BTHSC-322743': 'Parcial', 'BTHSC-321284': 'Parcial', 'BTHSC-322714': 'Parcial',
   'BTHSC-319068': 'Parcial', 'ASISI-101459': 'Aderente',
+  'BTHSC-324254': 'Aderente', 'BTHSC-323929': 'Aderente', 'BTHSC-321418': 'Parcial', 'BTHSC-318676': 'Aderente',
 };
 /*AVALIADOS_FIM*/
+/*HISTORICO_SERVICOS_INICIO*/
+// Alimentado automaticamente pelo snapshot diário a partir do historico_servicos.csv.
+// Cada item: { data: 'YYYY-MM-DD', escopo: taxa_escopo_pct, horas: taxa_horas_pct, composta: taxa_composta_pct } (numeros ou null)
+const HISTORICO_SERVICOS = [
+];
+/*HISTORICO_SERVICOS_FIM*/
+/*AVALIADOS_SERVICOS_INICIO*/
+// Alimentado automaticamente pelo snapshot diário a partir do avaliados_servicos.csv.
+// Cada entrada: 'CHAVE': { c: 'Acerto'|'Parcial'|'Erro', s: score 0..1, escopo: 'Aderente'|'Parcial'|'Divergente',
+//                          est: horas_estimadas, real: horas_apontadas, desvio: pct, h: 'OK'|'Subestimado'|'Superestimado' }
+const AVALIADOS_SERVICOS = {
+};
+/*AVALIADOS_SERVICOS_FIM*/
 const JIRA = 'https://atendimento.betha.com.br/browse/';
 let DATA = {}; let chart = null; let selVert = null; let sortK = 'updated'; let sortAsc = false;
+let SRV = []; let sortKS = 'updated'; let sortAscS = false;
+let ACTIVE = 'suporte'; let DESF = null; let histChart = null; let histSrvEsc = null; let histSrvHr = null;
+function showTab(name) {
+  ACTIVE = name;
+  document.getElementById('tab-suporte').classList.toggle('active', name === 'suporte');
+  document.getElementById('tab-servicos').classList.toggle('active', name === 'servicos');
+  document.getElementById('tab-btn-suporte').classList.toggle('active', name === 'suporte');
+  document.getElementById('tab-btn-servicos').classList.toggle('active', name === 'servicos');
+  drawActiveCharts();
+}
+function drawActiveCharts() {
+  if (ACTIVE === 'suporte') { drawDesfecho(); renderHistorico(); }
+  else { renderHistoricoServicos(); }
+}
 
 function parseResp(r) {
   if (r.isError) throw new Error((r.content && r.content[0] && r.content[0].text) || 'Erro MCP');
@@ -146,6 +250,21 @@ async function fetchVertical(v, periodo) {
   } while (issues.length < total && startAt < 500);
   return issues;
 }
+async function fetchServicos(periodo) {
+  let jql = 'comment ~ "IA-TRIAGEM-SERVICOS"';
+  if (periodo) jql += ' AND updated >= ' + periodo;
+  let startAt = 0, issues = [], total = 0;
+  do {
+    const r = await window.cowork.callMcpTool('mcp__jira-atendimento__search_issues', {
+      jql, maxResults: 100, startAt, response_format: 'detailed', extraFields: ['resolution', 'timespent', 'customfield_21500']
+    });
+    const d = parseResp(r);
+    issues = issues.concat(d.issues || []);
+    total = d.total || issues.length;
+    startAt += 100;
+  } while (issues.length < total && startAt < 500);
+  return issues;
+}
 function classify(i) {
   const labels = (i.labels || []).map(l => String(l).toUpperCase());
   if (labels.includes('IA-NAO-UTIL')) return { b: 'enc', f: 'rotulo' };
@@ -158,6 +277,17 @@ function classify(i) {
     return RES_RUIM.some(x => rn.includes(x)) ? { b: 'enc', f: 'proxy' } : { b: 'pend', f: 'proxy' };
   }
   return { b: 'and', f: 'proxy' };
+}
+function equipeOf(i) {
+  const c = i.customfield_21500;
+  if (!c) return '';
+  return (typeof c === 'object' ? (c.value || '') : String(c));
+}
+function classifyServico(i) {
+  const av = AVALIADOS_SERVICOS[i.key];
+  if (av) return { b: av.c === 'Acerto' ? 'res' : av.c === 'Erro' ? 'enc' : 'par', av };
+  if (i.statusCategory === 'Done') return { b: 'pend', av: null };
+  return { b: 'and', av: null };
 }
 function fmtDate(s) { return s ? s.slice(0, 10).split('-').reverse().join('/') : ''; }
 function rateClass(p) { return p === null ? 'rate-na' : p >= 70 ? 'rate-good' : p >= 40 ? 'rate-mid' : 'rate-bad'; }
@@ -183,19 +313,7 @@ function render() {
     c.onclick = () => { selVert = (selVert === v.id ? null : v.id); render(); };
     cards.appendChild(c);
   }
-  if (chart) chart.destroy();
-  chart = new Chart(document.getElementById('chart'), {
-    type: 'bar',
-    data: { labels, datasets: [
-      { label: 'Acertos', data: dRes, backgroundColor: '#1e8449' },
-      { label: 'Parciais', data: dPar, backgroundColor: '#b7950b' },
-      { label: 'Erros', data: dEnc, backgroundColor: '#c0392b' },
-      { label: 'Aguardando avaliação', data: dPend, backgroundColor: '#aab7b8' },
-      { label: 'Em andamento', data: dAnd, backgroundColor: '#85a9c5' },
-    ]},
-    options: { responsive: true, maintainAspectRatio: false,
-      scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } } }
-  });
+  DESF = { labels, dRes, dPar, dEnc, dPend, dAnd };
   let rows = [];
   for (const v of VERTICAIS) {
     if (selVert && v.id !== selVert) continue;
@@ -217,6 +335,101 @@ function render() {
     '<td>' + (r.summary || '').replace(/</g, '&lt;') + '</td><td>' + pill(r.bucket) +
     '<div style="font-size:11px;color:#5d6d7e">' + r.status + '</div></td><td>' + fpill(r.fonte) + '</td>' +
     '<td>' + r.resolution + '</td><td>' + fmtDate(r.updated) + '</td></tr>').join('');
+  renderServicos();
+  drawActiveCharts();
+}
+function drawDesfecho() {
+  if (!DESF) return;
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('chart'), {
+    type: 'bar',
+    data: { labels: DESF.labels, datasets: [
+      { label: 'Acertos', data: DESF.dRes, backgroundColor: '#1e8449' },
+      { label: 'Parciais', data: DESF.dPar, backgroundColor: '#b7950b' },
+      { label: 'Erros', data: DESF.dEnc, backgroundColor: '#c0392b' },
+      { label: 'Aguardando avaliação', data: DESF.dPend, backgroundColor: '#aab7b8' },
+      { label: 'Em andamento', data: DESF.dAnd, backgroundColor: '#85a9c5' },
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      scales: { x: { stacked: true }, y: { stacked: true, ticks: { precision: 0 } } } }
+  });
+}
+function mkCard(titulo, valor, cls, mini, info) {
+  const c = document.createElement('div');
+  c.className = 'card srv static';
+  c.innerHTML = '<h3>' + titulo + '</h3><div class="big ' + cls + '">' + valor + '</div>' +
+    (mini ? '<div class="mini">' + mini + '</div>' : '') + (info ? '<div class="lbl-info">' + info + '</div>' : '');
+  return c;
+}
+function renderServicos() {
+  const n = b => SRV.filter(i => i._b === b).length;
+  const res = n('res'), par = n('par'), enc = n('enc'), pend = n('pend'), and = n('and');
+  const avaliados = SRV.filter(i => i._av);
+  const nAval = avaliados.length;
+  const taxaComp = nAval ? Math.round(avaliados.reduce((s, i) => s + (i._av.s || 0), 0) / nAval * 100) : null;
+  // Escopo
+  const escAval = avaliados.filter(i => i._av.escopo);
+  const nEsc = escAval.length;
+  const escAderN = escAval.filter(i => i._av.escopo === 'Aderente').length;
+  const escParN = escAval.filter(i => i._av.escopo === 'Parcial').length;
+  const escDivN = escAval.filter(i => i._av.escopo === 'Divergente').length;
+  const taxaEsc = nEsc ? Math.round((escAderN + 0.5 * escParN) / nEsc * 100) : null;
+  // Horas
+  const hrAval = avaliados.filter(i => i._av.h);
+  const nHr = hrAval.length;
+  const horasOkN = hrAval.filter(i => i._av.h === 'OK').length;
+  const subest = hrAval.filter(i => i._av.h === 'Subestimado').length;
+  const superest = hrAval.filter(i => i._av.h === 'Superestimado').length;
+  const taxaHr = nHr ? Math.round(horasOkN / nHr * 100) : null;
+
+  const top = document.getElementById('cards-srv-top'); top.innerHTML = '';
+  top.appendChild(mkCard('Serviços comentados', String(SRV.length), 'rate-na',
+    '<span>Avaliados: <b>' + nAval + '</b></span><span>Aguard. fechamento: <b>' + pend + '</b></span><span>Em andamento: <b>' + and + '</b></span>',
+    'Avaliação só no fechamento (Done)'));
+  top.appendChild(mkCard('Taxa composta', taxaComp === null ? '—' : taxaComp + '%', rateClass(taxaComp),
+    '<span>Acertos: <b>' + res + '</b></span><span>Parciais: <b>' + par + '</b></span><span>Erros: <b>' + enc + '</b></span>',
+    'Média dos sub-escores (escopo + horas) sobre ' + nAval + ' avaliado(s)'));
+
+  const esc = document.getElementById('cards-srv-escopo'); esc.innerHTML = '';
+  esc.appendChild(mkCard('Taxa de escopo', taxaEsc === null ? '—' : taxaEsc + '%', rateClass(taxaEsc),
+    '<span>Aderente: <b>' + escAderN + '</b></span><span>Parcial: <b>' + escParN + '</b></span><span>Divergente: <b>' + escDivN + '</b></span>',
+    'Escopo executado x sugerido, sobre ' + nEsc + ' avaliado(s)'));
+
+  const hr = document.getElementById('cards-srv-horas'); hr.innerHTML = '';
+  hr.appendChild(mkCard('Taxa de horas (±25%)', taxaHr === null ? '—' : taxaHr + '%', rateClass(taxaHr),
+    '<span style="color:#c0392b">Subestimados (risco): <b>' + subest + '</b></span><span style="color:#b7950b">Superestimados: <b>' + superest + '</b></span><span>Na faixa: <b>' + horasOkN + '</b></span>',
+    'Apontado x estimativa da IA, sobre ' + nHr + ' avaliado(s)'));
+
+  let rows = SRV.map(i => ({ key: i.key, equipe: equipeOf(i), summary: i.summary, bucket: i._b, av: i._av,
+    est: i._av ? i._av.est : null, real: i._av ? i._av.real : null, desvio: i._av ? i._av.desvio : null,
+    escopo: i._av ? i._av.escopo : '', updated: i.updated || '', status: i.status }));
+  rows.sort((a, b) => {
+    let x = a[sortKS], y = b[sortKS];
+    if (sortKS === 'est' || sortKS === 'real' || sortKS === 'desvio') { x = x == null ? -1e9 : x; y = y == null ? -1e9 : y; return (x - y) * (sortAscS ? 1 : -1); }
+    x = x || ''; y = y || ''; return (x < y ? -1 : x > y ? 1 : 0) * (sortAscS ? 1 : -1);
+  });
+  document.getElementById('tbl-srv-title').textContent = 'Serviços com sugestão da IA (' + rows.length + ')';
+  const pill = b => b === 'res' ? '<span class="pill p-res">Acerto</span>' :
+    b === 'par' ? '<span class="pill p-par">Parcial</span>' :
+    b === 'enc' ? '<span class="pill p-enc">Erro</span>' :
+    b === 'pend' ? '<span class="pill p-pend">Aguardando avaliação</span>' : '<span class="pill p-and">Em andamento</span>';
+  const epill = e => e === 'Aderente' ? '<span class="pill p-res">Aderente</span>' :
+    e === 'Parcial' ? '<span class="pill p-par">Parcial</span>' :
+    e === 'Divergente' ? '<span class="pill p-enc">Divergente</span>' : '';
+  const dpill = av => { if (!av) return ''; const t = (av.desvio > 0 ? '+' : '') + av.desvio + '%';
+    return av.h === 'OK' ? '<span class="pill p-ok">' + t + ' OK</span>' :
+      av.h === 'Subestimado' ? '<span class="pill p-sub">' + t + ' subest.</span>' :
+      '<span class="pill p-sup">' + t + ' superest.</span>'; };
+  document.querySelector('#tbl-srv tbody').innerHTML = rows.map(r =>
+    '<tr><td><a href="' + JIRA + r.key + '" target="_blank">' + r.key + '</a></td>' +
+    '<td>' + (r.equipe || '') + '</td>' +
+    '<td>' + (r.summary || '').replace(/</g, '&lt;') + '</td>' +
+    '<td>' + pill(r.bucket) + '<div style="font-size:11px;color:#5d6d7e">' + (r.status || '') + '</div></td>' +
+    '<td>' + epill(r.escopo) + '</td>' +
+    '<td>' + (r.est == null ? '' : r.est) + '</td>' +
+    '<td>' + (r.real == null ? '' : r.real) + '</td>' +
+    '<td>' + dpill(r.av) + '</td>' +
+    '<td>' + fmtDate(r.updated) + '</td></tr>').join('');
 }
 function renderHistorico() {
   const datas = [...new Set(HISTORICO.map(h => h.data))].sort();
@@ -231,15 +444,42 @@ function renderHistorico() {
     data: datas.map(d => { const h = HISTORICO.find(x => x.data === d && x.vertical === v.id); return h ? h.taxa : null; }),
     borderColor: cores[v.id], backgroundColor: cores[v.id], spanGaps: true, tension: .2
   }));
-  new Chart(document.getElementById('histChart'), {
+  if (histChart) histChart.destroy();
+  histChart = new Chart(document.getElementById('histChart'), {
     type: 'line',
     data: { labels: datas.map(d => d.split('-').reverse().join('/')), datasets: ds },
     options: { responsive: true, maintainAspectRatio: false,
       scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
   });
 }
-document.querySelectorAll('th').forEach(th => th.onclick = () => {
+function lineChartPct(canvasId, labels, label, dados, cor) {
+  return new Chart(document.getElementById(canvasId), {
+    type: 'line',
+    data: { labels, datasets: [{ label, data: dados, borderColor: cor, backgroundColor: cor, spanGaps: true, tension: .2 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      scales: { y: { min: 0, max: 100, ticks: { callback: v => v + '%' } } } }
+  });
+}
+function renderHistoricoServicos() {
+  const pts = (HISTORICO_SERVICOS || []).slice().sort((a, b) => a.data < b.data ? -1 : 1);
+  if (!pts.length) {
+    document.getElementById('hist-srv-esc-wrap').style.display = 'none';
+    document.getElementById('hist-srv-esc-empty').style.display = 'block';
+    document.getElementById('hist-srv-hr-wrap').style.display = 'none';
+    document.getElementById('hist-srv-hr-empty').style.display = 'block';
+    return;
+  }
+  const labels = pts.map(p => p.data.split('-').reverse().join('/'));
+  if (histSrvEsc) histSrvEsc.destroy();
+  if (histSrvHr) histSrvHr.destroy();
+  histSrvEsc = lineChartPct('histSrvEscChart', labels, 'Taxa de escopo', pts.map(p => p.escopo == null ? null : p.escopo), '#148f77');
+  histSrvHr = lineChartPct('histSrvHrChart', labels, 'Taxa de horas (±25%)', pts.map(p => p.horas == null ? null : p.horas), '#b7950b');
+}
+document.querySelectorAll('#tbl th').forEach(th => th.onclick = () => {
   const k = th.dataset.k; if (sortK === k) sortAsc = !sortAsc; else { sortK = k; sortAsc = true; } render();
+});
+document.querySelectorAll('#tbl-srv th').forEach(th => th.onclick = () => {
+  const k = th.dataset.ks; if (sortKS === k) sortAscS = !sortAscS; else { sortKS = k; sortAscS = true; } renderServicos();
 });
 async function load() {
   if (!window.cowork || !window.cowork.callMcpTool) {
@@ -264,6 +504,10 @@ async function load() {
       list.forEach(i => { const c = classify(i); i._b = c.b; i._f = c.f; });
       DATA[v.id] = list;
     }
+    document.getElementById('status').textContent = 'Consultando: Serviços…';
+    const srv = await fetchServicos(periodo);
+    srv.forEach(i => { const c = classifyServico(i); i._b = c.b; i._av = c.av; });
+    SRV = srv;
     document.getElementById('status').textContent = 'Atualizado em ' + new Date().toLocaleString('pt-BR');
   } catch (e) {
     const el = document.getElementById('err');
@@ -273,9 +517,9 @@ async function load() {
   }
   render();
 }
-renderHistorico();
 document.getElementById('periodo').value = localStorage.getItem('triagem_periodo') || '';
 document.getElementById('periodo').onchange = load;
+showTab('suporte');
 load();
 </script>
 </body>

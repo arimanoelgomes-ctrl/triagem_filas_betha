@@ -4,8 +4,12 @@ Esta pasta guarda a série histórica da análise **Triagem x Eficiência**, ger
 
 ## Arquivos
 
-- `YYYY-MM-DD.md` — relatório semanal legível: métricas por vertical + análise de aderência dos chamados encerrados na semana.
-- `historico.csv` — série histórica acumulada (1 linha por vertical por snapshot), base para gráficos de evolução.
+- `YYYY-MM-DD.md` — relatório legível do dia: métricas por vertical + análise de aderência dos chamados encerrados + seção separada de assertividade de serviços.
+- `historico.csv` — série histórica acumulada das verticais de produto (1 linha por vertical por snapshot), base para gráficos de evolução.
+- `avaliados.csv` — registro local de chamados de produto já avaliados (fonte de verdade do "já avaliado").
+- `historico_servicos.csv` — série histórica da assertividade de serviços (1 linha por snapshot): `data, n_avaliados, taxa_escopo_pct, taxa_horas_pct, taxa_composta_pct, n_subestimados, n_superestimados`.
+- `avaliados_servicos.csv` — registro local dos serviços já avaliados: `chamado, equipe, data_avaliacao, escopo, horas_estimadas, horas_apontadas, desvio_pct, horas_bucket, classificacao, score`.
+- `painel_triagem_eficiencia.html` — painel (artifact `triagem-x-eficiencia`); contém a parte das verticais de produto e a parte separada de Serviços (duas visões: escopo e horas).
 
 ## Métricas (por vertical)
 
@@ -41,16 +45,4 @@ Regras: o snapshot **nunca** usa `IA-UTIL`/`IA-NAO-UTIL` (exclusivos dos analist
 Para cada chamado comentado pela IA que **encerrou desde o último snapshot e não possui rótulo de feedback**, o agente compara o comentário da triagem com a solução registrada no chamado e classifica:
 
 - **Aderente** — a solução final corresponde à sugestão da IA (mesmo procedimento/causa).
-- **Parcial** — a solução usou parte da sugestão ou o mesmo diagnóstico com tratamento diferente.
-- **Divergente** — a solução não tem relação com o que a IA sugeriu.
-
-Essa classificação é feita pelo agente (leitura dos comentários) e registrada no relatório da semana com justificativa de 1 linha por chamado — auditável por amostragem.
-
-## Feedback manual dos analistas (opcional, eleva a precisão)
-
-Convenção proposta: ao usar ou descartar uma sugestão da triagem, o analista adiciona no campo **Rótulos (labels)** do chamado:
-
-- `IA-UTIL` — a sugestão ajudou na resolução.
-- `IA-NAO-UTIL` — a sugestão não ajudou.
-
-O snapshot conta essas labels via JQL (`labels in (IA-UTIL)`); quando existirem, prevalecem sobre o proxy automático.
+- 

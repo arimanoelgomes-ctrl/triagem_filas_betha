@@ -50,9 +50,14 @@ triagem_filas_betha/
     │   ├── docs/                          # Docs específicos do Contábil (PCASP, MSC, e-Sfinge contábil)
     │   ├── logs/
     │   └── outputs/
-    └── compras_contratos/
-        ├── CLAUDE.md                      # Instruções operacionais
-        ├── docs/                          # Docs específicos de Compras/Contratos (NLLC, PNCP, TCE-SC)
+    ├── compras_contratos/
+    │   ├── CLAUDE.md                      # Instruções operacionais
+    │   ├── docs/                          # Docs específicos de Compras/Contratos (NLLC, PNCP, TCE-SC)
+    │   ├── logs/
+    │   └── outputs/
+    └── servicos/                          # FILA DE SERVIÇOS — atravessa todos os produtos
+        ├── CLAUDE.md                      # Triagem de escopo + horas estimadas (não sugere solução)
+        ├── docs/                          # Catálogo de serviços, critérios de similaridade
         ├── logs/
         └── outputs/
 ```
@@ -66,8 +71,11 @@ triagem_filas_betha/
 | **saude** | Sistemas de Saúde Municipal (PEC, e-SUS APS, BPA, RAAS, regulação, agendamento, farmácia, vacinas etc.) | maite.passos@betha.com.br (Maitê) |
 | **contabil** | Contábil (Cloud), Planejamento, Tesouraria, Prestação de Contas (e-Sfinge/MSC/SICONFI), Portal do Gestor | arimanoel.gomes@betha.com.br (Ari) |
 | **compras_contratos** | Compras (Cloud), Contratos (Cloud), licitações, PNCP, envio de atos de contratação ao TCE-SC | arimanoel.gomes@betha.com.br (Ari) |
+| **servicos** | Fila de serviços (`Equipe responsável` ∈ "Serviço", "Serviços Especializados", "Migração") de TODOS os produtos — Arrecadação/ISS, Pessoal+Saúde+Educação, Contábil, Compras/Contratos | arimanoel.gomes@betha.com.br (Ari) |
 
 Cada vertical tem sua **JQL própria** (definida no `CLAUDE.md` da pasta correspondente) e os 2 agendamentos consolidados (manhã + tarde) processam todas em sequência. **Cada vertical gera seu próprio rascunho de email** — nunca consolidamos rascunhos entre verticais.
+
+> **A vertical `servicos` é de natureza diferente.** Em vez de sugerir a **solução** de uma dúvida/incidente (como as verticais de produto), ela faz a **triagem de serviços**: identifica qual serviço está sendo solicitado e sugere ao analista o **escopo** (campo "Informações para negociação", `cf[16000]`) e as **horas estimadas** — calculadas pela **média ponderada das horas efetivamente apontadas** (`timespent`) em chamados de serviço já solucionados semelhantes, **não** pela estimativa original. Isso evita orçar serviços abaixo do que historicamente consomem. Considera como "serviço" as equipes responsáveis "Serviço", "Serviços Especializados" e "Migração". Usa a tag de idempotência própria `[#IA-TRIAGEM-SERVICOS#]`.
 
 ## Regras críticas (aplicam-se a todas as verticais)
 
@@ -112,38 +120,11 @@ Detalhes de cada vertical: `verticais/<nome>/CLAUDE.md`.
 
 ## Operação diária
 
-Os agendamentos rodam automaticamente nos horários configurados no Cowork. **Há 2 execuções por dia útil** (manhã 07:30 e tarde 15:00), e cada uma processa as 5 verticais em sequência (arrecadacao, pessoal, saude, contabil, compras_contratos).
+Os agendamentos rodam automaticamente nos horários configurados no Cowork. **Há 2 execuções por dia útil** (manhã 07:30 e tarde 15:00), e cada uma processa as verticais em sequência (arrecadacao, pessoal, saude, contabil, compras_contratos e servicos).
 
 ### Notificações e rascunhos de email
 
 - **Manhã:** apenas processa a triagem e gera os logs do dia. **Não cria rascunho de email.**
 - **Tarde:** processa o delta sobre a manhã + **cria um rascunho de email diário consolidado por vertical** (manhã + tarde em um único resumo). **Condicional:** o rascunho só é criado se aquela vertical teve **pelo menos 1 comentário postado** no dia. Se uma vertical não comentou nada hoje, o rascunho dela é suprimido para reduzir ruído na caixa de entrada.
 
-Cada vertical mantém seu **destinatário próprio** (rascunhos NUNCA são consolidados entre verticais):
-
-- Arrecadação, Pessoal, Contábil e Compras/Contratos → `arimanoel.gomes@betha.com.br` (Ari).
-- Saúde → `maite.passos@betha.com.br` (Maitê).
-
-### O que você pode fazer com os outputs
-
-1. **Verificar visualmente** o log do dia em `verticais/<nome>/logs/<DATA>.md`.
-2. **Conferir os comentários postados** (a IA posta direto via MCP `add_comment` com `internal: true`).
-3. **Caso queira reprocessar** algum chamado manualmente, use o `scripts/post_comentarios.js`.
-4. **Revisar e enviar os rascunhos de email** que ficam salvos no Gmail (chega no Drafts, não na caixa de entrada).
-
-## Atualizações e contribuições
-
-Como é um monorepo, qualquer melhoria no `scripts/` ou `docs/` raiz beneficia automaticamente todas as verticais. Para adicionar uma **nova vertical**:
-
-1. Criar `verticais/<nome>/` com `CLAUDE.md`, `docs/`, `logs/.gitkeep`, `outputs/.gitkeep`.
-2. Definir a JQL e o domínio no novo `CLAUDE.md` (use os existentes como base).
-3. Criar o agendamento correspondente no Cowork.
-4. Adicionar a vertical à tabela acima e ao `MIGRACAO.md`/changelog.
-
-## Repositório Git
-
-https://github.com/arimanoelgomes-ctrl/triagem_filas_betha
-
-Repositórios anteriores (arquivados / read-only após a consolidação):
-- `triagem_fila_arrecadacao` (substituído por `verticais/arrecadacao/`)
-- `triagem_fila_pessoal` (substituído por `verticais/pessoal/`)
+Cada vertical mantém seu **destinatário próprio** (rascunhos NUNCA são consol

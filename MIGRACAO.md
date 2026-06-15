@@ -2,6 +2,10 @@
 
 > Documento temporário. Pode ser apagado após a migração ser concluída e validada.
 
+## Changelog do monorepo
+
+- **2026-06-15 — Nova vertical `servicos` (Triagem de Serviços).** Criada `verticais/servicos/` (CLAUDE.md, docs/README.md, logs/README.md, outputs/). Natureza diferente das demais: não sugere solução, e sim **escopo + horas estimadas** para a fila de serviços (`Equipe responsável` ∈ "Serviço", "Serviços Especializados", "Migração"). Processa 4 JQLs (Arrecadação/ISS, Pessoal+Saúde+Educação, Contábil, Compras/Contratos). Horas estimadas = **média ponderada por semelhança** das horas apontadas (`timespent`) de chamados solucionados; escopo = síntese do campo "Informações para negociação" (`cf[16000]`). Tag de idempotência própria: `[#IA-TRIAGEM-SERVICOS#]`. **Pendente:** criar o agendamento no Cowork apontando para `verticais/servicos/CLAUDE.md` (incluir na sequência manhã/tarde).
+
 **Data:** 2026-06-09
 **Repositório novo:** https://github.com/arimanoelgomes-ctrl/triagem_filas_betha
 **Repositórios antigos (a serem arquivados):**
@@ -163,25 +167,4 @@ Quando estiver confiante de que tudo está migrado:
 ```cmd
 :: Backup primeiro, por seguranca
 move C:\Scripts\ias\projetos_de_ia\triagem_fila_arrecadacao C:\Scripts\ias\projetos_de_ia\_archived\triagem_fila_arrecadacao
-move C:\Scripts\ias\projetos_de_ia\triagem_fila_pessoal     C:\Scripts\ias\projetos_de_ia\_archived\triagem_fila_pessoal
-```
-
-Mantenha o `_archived/` por algumas semanas antes de apagar definitivamente.
-
-## O que NÃO mudou
-
-- A JQL de cada vertical permanece igual.
-- O fluxo dos 7 passos (coletar → filtrar → analisar → comentar → log → email → tokens) permanece igual.
-- A regra de não consolidar rascunhos de email entre verticais permanece.
-- Idempotência reforçada, sem emoji, sem comentário público — todas as regras críticas permanecem.
-
-## Após a migração — apagar este arquivo
-
-Quando os 2 agendamentos novos rodarem com sucesso por uma semana e tudo estiver funcionando, apague `MIGRACAO.md` do repo:
-
-```cmd
-del MIGRACAO.md
-git add MIGRACAO.md
-git commit -m "chore: remove guia de migracao apos consolidacao validada"
-git push
-```
+move C:\Scripts\ias\
