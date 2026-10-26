@@ -2,6 +2,8 @@
 
 > **Parte do monorepo `triagem_filas_betha`.** Scripts auxiliares e docs gerais estão na raiz (`../../scripts/`, `../../docs/`). Esta pasta contém apenas o que é específico da vertical Serviços: CLAUDE.md (este arquivo), docs/, logs/, outputs/.
 
+> **Reconciliado com a execução real em 2026-08-31.** Este arquivo tinha ficado ~2,5 meses sem atualização enquanto a operação evoluía nos logs diários. Foram alinhados: **(1)** o recorte das 4 JQLs do Passo 1, que passou de lista fixa de municípios para **"Portfólio de Atendimento" (Pequenas + Médias)**, com a Saúde mantida sem recorte; **(2)** a **varredura por status dimensionável** (novo passo 1.5), que é obrigatória e recupera chamados antigos que só agora entraram em negociação; **(3)** o rascunho de email, que hoje é **dividido por portfólio**, com destinatários diferentes; **(4)** o markup do comentário, que é **wiki markup do Jira em ASCII**, não markdown. Quando a prática divergir deste arquivo de novo, a fonte de verdade são os `logs/YYYY-MM-DD.md`.
+
 > **Esta vertical é diferente das demais.** As outras verticais (Arrecadação, Pessoal, Saúde, Contábil, Compras/Contratos) são organizadas por **produto** e sugerem **soluções** para dúvidas/incidentes. A vertical **Serviços** é organizada por **fila** (chamados cujas equipes de serviço negociável da Betha — `Equipe responsável` ∈ {**"Serviço"**, **"Serviços Especializados"**, **"Migração"**}) e tem um objetivo próprio: **identificar qual serviço está sendo solicitado e sugerir ao analista (1) o ESCOPO do serviço e (2) as HORAS ESTIMADAS**, ambos com base em chamados de serviço **já solucionados** que tratam do mesmo tipo de serviço.
 
 ## Repositório Git
@@ -70,28 +72,68 @@ Execute as 4 buscas JQL abaixo no MCP `jira-atendimento`, **uma de cada vez**, c
 ### 1.1 — Arrecadação / ISS
 
 ```jql
-(Vertical in (Arrecadação, ISS) OR Vertical = Atendimento AND Sistema in ("Protocolo (Cloud)", "Cidadão Web (Cloud)", "Cidadão Web 3 (Web)", "Cidadão Web 4 (Fly)", "Cidadão Web 2", "Cidadão Web 2 (Web)")) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) ORDER BY cf[10300] DESC, cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[22902] ASC, assignee DESC
+(Vertical in (Arrecadação, ISS) OR Vertical = Atendimento AND Sistema in ("Protocolo (Cloud)", "Cidadão Web (Cloud)", "Cidadão Web 3 (Web)", "Cidadão Web 4 (Fly)", "Cidadão Web 2", "Cidadão Web 2 (Web)")) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) ORDER BY cf[10300] DESC, cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[22902] ASC, assignee DESC
 ```
 
 ### 1.2 — Pessoal (+ Saúde + Educação)
 
 ```jql
-Vertical in (Pessoal) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) OR Vertical in (Saúde) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) OR Vertical in (Educação) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
+Vertical in (Pessoal) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) OR Vertical in (Saúde) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND issuetype not in (Implantação) OR Vertical in (Educação) AND "Equipe responsável" not in (Suporte, Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão") AND status not in ("Produto contratado") AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
 ```
 
 ### 1.3 — Contábil (Portfólio Pequenas Contas)
 
 ```jql
-(Vertical in (Contábil) OR Vertical = Atendimento AND Sistema not in ("Protocolo (Cloud)", "Cidadão Web (Cloud)", "Cidadão Web 3 (Web)", "Cidadão Web 4 (Fly)", "Cidadão Web 2", "Cidadão Web 2 (Web)")) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão", Suporte) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND "Portfólio de Atendimento" in ("Portfólio Pequenas Contas") AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
+(Vertical in (Contábil) OR Vertical = Atendimento AND Sistema not in ("Protocolo (Cloud)", "Cidadão Web (Cloud)", "Cidadão Web 3 (Web)", "Cidadão Web 4 (Fly)", "Cidadão Web 2", "Cidadão Web 2 (Web)")) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão", Suporte) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
 ```
 
 ### 1.4 — Compras / Contratos
 
 ```jql
-Vertical in (Contratos) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão", Suporte) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
+Vertical in (Contratos) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações, "Ferramenta de Conversão", Suporte) AND status not in ("Produto contratado", Reprovada) AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
 ```
 
 > **Dica de performance:** ao buscar, peça os `extraFields` `["customfield_16000", "customfield_21500", "timespent", "timeoriginalestimate", "issuetype", "description"]` para já trazer escopo e tempos sem `get_issue` por chamado.
+
+> **Recorte corrigido em 2026-08-31 (decisão do coordenador).** O recorte correto destas 4 JQLs é por **"Portfólio de Atendimento" (Pequenas + Médias Contas)**, e não por lista de municípios — as listas fixas de municípios de SC foram removidas. **Exceção: a Saúde continua atendendo todos**, então o bloco `Vertical in (Saúde)` da JQL 1.2 ficou **sem qualquer recorte** de município ou portfólio, coerente com o CLAUDE.md daquela vertical (que também não filtra por portfólio).
+
+> **RECORTE DE CARTEIRA ALTERADO EM 2026-10-26 (decisão do coordenador).** O recorte **não é mais** o campo "Portfólio de Atendimento" (`cf[32400]`) — ele ficou desatualizado após a redistribuição de clientes. O recorte agora é por **`Município`** (`cf[10331]`), a partir da planilha *Organização equipes - MC* / aba *Clientes Pequenas e Médias Contas*: **gestão Arimanoel = Pequenas Contas; Thiago (Oeste), Francieli (Norte) e Emanuel (Sul) = Médias Contas**. Onde as JQLs acima trazem `<<RECORTE_CARTEIRA>>`, **expanda literalmente o conteúdo de [`../../scripts/recorte_carteira.jql`](../../scripts/recorte_carteira.jql)** (126 municípios + a entidade CIMPLASC). O mapa canônico, com a divisão por gestão, está em [`../../scripts/portfolio_municipios.json`](../../scripts/portfolio_municipios.json).
+>
+> ⚠️ **`Município` é campo de TEXTO LIVRE, não lista de valores.** O Jira aceita qualquer string dentro de `in (...)` **sem devolver erro** — grafia errada simplesmente retorna menos chamados. Em 26/10 a planilha grafava `ANTONIO CARLOS` e o Jira usa `Antônio Carlos`: um circunflexo apagava **3 chamados** da fila da Arrecadação, silenciosamente. Nunca confie num `in (...)` que "rodou sem erro"; confira sempre a contagem.
+>
+> 🛡️ **Guarda-corpo obrigatório em todo turno.** Rode a mesma JQL trocando `Município in (...)` por `Município not in (...)` (mantendo os demais filtros). O que voltar é **município fora do mapa**: **triar normalmente como Médias Contas** e listar em seção própria `Municípios fora do mapa` no log e no e-mail. Exceção: **São Miguel do Oeste** é atendido por revenda parceira e fica fora da fila **sem alerta**.
+>
+> **Exceção por entidade — CIMPLASC.** Em Campos Novos há 73 chamados abertos e **apenas o do consórcio CIMPLASC é nosso** (os demais são `Parceiro de Negócios`). Por isso a inclusão é pela **entidade**, nunca pelo município — incluir "Campos Novos" na lista traria 72 chamados indevidos.
+
+>
+> Efeito medido em 2026-08-31, com as JQLs rodadas antes e depois:
+>
+> | JQL | Antes (município) | Depois (portfólio) |
+> |-----|-------------------|--------------------|
+> | 1.1 Arrecadação / ISS | 36 | **115** |
+> | 1.2 Pessoal + Saúde + Educação | — | **101** |
+> | 1.3 Contábil (era só Pequenas) | — | **38** |
+> | 1.4 Compras / Contratos | 11 | **35** |
+>
+> O salto da 1.1 (36 -> 115) é a evidência mais forte de que o portfólio já era o recorte real em uso: o log da manhã de 2026-08-31 registrou **fila bruta 1.1 = 134**, número compatível com a versão por portfólio e incompatível com os 36 da versão por município. Ou seja, a lista de municípios estava escondendo a maior parte da fila de serviços.
+
+### 1.5 — Varredura por STATUS dimensionável (obrigatória desde 2026-08-31)
+
+As 4 JQLs acima trazem a fila bruta, mas o delta por `created` **não captura chamados antigos que só agora entraram na trilha de negociação** — e são justamente eles que ficam parados sem dimensionamento. Por isso, além do delta por criação, execute a varredura abaixo e cruze com a tag de idempotência:
+
+```jql
+status in ("Aguardando Negociação", "Aguardando planejamento", "Em Planejamento") AND issuetype in ("Acompanhamento técnico", "Customização", "Tratamento de dados") AND resolution = Unresolved AND (<<RECORTE_CARTEIRA>> OR Vertical = Saúde) AND updated >= "<data/hora da execução anterior>" ORDER BY created DESC
+```
+
+⚠️ **O filtro de portfólio acima é obrigatório e foi a correção de 2026-09-01.** A varredura por status é a única consulta desta vertical que não nasce das 4 JQLs do Passo 1 — e, sem o recorte, ela alcança **portfólios que não são objeto desta triagem** (ex.: "Portfólio SC/SP", "Portfólio SC/MG"). O `OR Vertical = Saúde` preserva a exceção da vertical Saúde, que atende todos os clientes e não tem recorte de portfólio (mesma regra da JQL 1.2 do Passo 1).
+
+Depois, identifique quais desses já têm a tag rodando a mesma JQL com `AND text ~ "IA-TRIAGEM-SERVICOS"` — os que não aparecerem são os candidatos a analisar. **Não use `AND NOT text ~ ...`**: a negação de busca full-text no Jira retorna vazio de forma silenciosa e faz a varredura parecer limpa quando não está.
+
+> **Antes de dimensionar, confirme o portfólio do chamado individualmente** consultando o `Município` (`key = X` com `extraFields: ["customfield_10331"]`) e cruzando com `scripts/portfolio_municipios.json`; registre-o no log. Isso serve a dois propósitos: confirmar que o chamado está no escopo e definir o destino do rascunho do Passo 7. Nunca deduza o portfólio de um chamado a partir da consulta feita para outro.
+
+> Esta varredura nasceu na execução de 2026-08-31, quando recuperou dois chamados criados em 03/2026 e 07/2026 (BTHSC-295502 e BTHSC-333691) que já estavam em negociação/CRM havia semanas e nunca tinham sido dimensionados.
+>
+> **Incidente que originou o filtro de portfólio (2026-09-01):** na primeira execução após a criação deste passo, a varredura sem recorte trouxe chamados de "Portfólio SC/SP" e "Portfólio SC/MG", e dois deles chegaram a ser dimensionados indevidamente (BTHSC-343145 e BTHSC-348807). Um levantamento na mesma data mostrou **8 chamados tagueados desses dois portfólios** — ou seja, o vazamento era anterior e vinha passando despercebido. Com o filtro acima, a varredura passa a respeitar o mesmo recorte das 4 JQLs do Passo 1.
 
 ## Passo 2: Filtros de Idempotência, Status e Escopo de Tipo
 
@@ -168,25 +210,27 @@ Formato do comentário (omita seções que não se aplicarem, mantenha a tag int
 
 ```markdown
 [#IA-TRIAGEM-SERVICOS#]
-**Triagem Automática de Serviços — Sugestão de Escopo e Horas**
+*Triagem Automatica de Servicos — Sugestao de Escopo e Horas*
 Identifiquei o serviço solicitado e busquei serviços semelhantes já executados em nossa base.
 
-**Serviço identificado:** [descrição curta e canônica do serviço]
+*Servico identificado:* [descrição curta e canônica do serviço]
 
-**Escopo sugerido (com base no histórico):**
+*Escopo sugerido (com base no historico):*
 [Síntese das atividades/premissas a partir do campo "Informações para negociação" dos chamados-base. Deixe claro o que está incluído e, quando o histórico indicar, o que NÃO está]. Base: [BTHSC-XXXX, BTHSC-YYYY].
 
-**Horas estimadas sugeridas:** ~[N] h (média ponderada das horas APONTADAS de serviços semelhantes)
+*Horas estimadas sugeridas:* ~[N] h (média ponderada das horas APONTADAS de serviços semelhantes)
 - Chamados-base: [BTHSC-XXXX: Hh (peso 3), BTHSC-YYYY: Hh (peso 2), ...]
 - Faixa observada: [mín] h a [máx] h | Nº de chamados-base: [K]
 - Estimativa original média desses chamados: [M] h
 - [SE APLICÁVEL] Atenção: historicamente este serviço CONSUMIU mais horas do que o estimado (apontado [N]h x estimado [M]h). Avalie orçar pelas horas apontadas para nao prestar o servico no prejuizo.
 
-**Análise Complementar (Busca Externa):**
+*Analise Complementar (Busca Externa):*
 [APENAS se houver lei/regra de negócio buscada fora do Jira para delimitar o escopo. Identifique como externa.]
 
-**Nota para o analista:** Estimativa baseada em histórico real de serviços semelhantes. Valide o escopo e o volume específico deste município/entidade (quantidade de matrículas, competências, complexidade) antes de fechar a APS/negociação.
+*Nota para o analista:* Estimativa baseada em histórico real de serviços semelhantes. Valide o escopo e o volume específico deste município/entidade (quantidade de matrículas, competências, complexidade) antes de fechar a APS/negociação.
 ```
+
+> **Convenção de markup vigente (reconciliada em 2026-08-31).** O template acima está em **wiki markup do Jira** (`*negrito*` com asterisco simples), que é o que o Jira renderiza — markdown `**negrito**` sai como texto literal e foi abandonado ao longo de 08/2026. Além disso, a convenção adotada na prática é escrever o corpo do comentário **sem acentuação** (ASCII): a restrição real do banco é apenas quanto a caracteres fora do BMP, mas remover a acentuação virou salvaguarda padrão do monorepo depois do incidente de encoding. Mantenha os dois hábitos — wiki markup e ASCII — para ficar consistente com os comentários já postados.
 
 **Regra de Exceção:** se não houver base histórica confiável (sem chamados solucionados semelhantes com horas apontadas), **não gere comentário** — registre no log o motivo.
 
@@ -200,16 +244,26 @@ Ao final, gere obrigatoriamente `logs/YYYY-MM-DD.md` no formato de [`logs/README
 
 ⚠️ Responsabilidade **exclusiva da execução da tarde**. A manhã NÃO cria rascunho.
 
-- **CRIE** se a vertical Serviços teve **≥ 1 comentário postado** no dia (manhã + tarde). **NÃO CRIE** se não houve nenhum (registre no log que o rascunho foi suprimido).
-- **Assunto:** `[Triagem Serviços] Resumo do dia YYYY-MM-DD`
-- **Para:** `arimanoel.gomes@betha.com.br` (coordenador Ari)
-- **Corpo (HTML, estilos inline — padrão do monorepo):** cabeçalho em faixa azul `#1a5276` ("Triagem de Serviços" + data); 4 cartões de totais (fila / com sugestão em verde `#1e8449` / sem sugestão em âmbar `#b7950b` / ignorados em cinza); tabela dos chamados com sugestão (colunas: Chamado com link, Serviço identificado, Horas estimadas, Nº base, Estimado x Apontado) destacando em vermelho os casos onde apontado > estimado; tabela dos sem sugestão (Chamado, Assunto, Motivo); seção Observações; link para o log; rodapé "gerado automaticamente — revisar antes de circular". Forneça também `body` texto simples como fallback.
-- **Restrições de markup (lições do monorepo):** o Gmail descarta `background:` abreviado — usar SEMPRE `background-color:` + atributo `bgcolor`; cabeçalho/container como `<table>`/`<td>` (não `<div>` com fundo); sem `border-radius` no cabeçalho; **sem emojis**.
+O rascunho é **dividido por portfólio**, com destinatários diferentes, e cada recorte é avaliado de forma independente:
+
+- **CRIE o rascunho de Pequenas Contas** se houve **≥ 1 dimensionamento postado no dia em chamado de Pequenas Contas** (manhã + tarde).
+- **CRIE o rascunho de Médias Contas** se houve **≥ 1 dimensionamento postado no dia em chamado de Médias Contas** (manhã + tarde).
+- **NÃO CRIE** o rascunho do recorte que ficou sem nenhum dimensionamento no dia (registre no log que foi suprimido).
+- Classifique cada chamado dimensionado pelo **`Município`** (`cf[10331]`) confrontado com [`../../scripts/portfolio_municipios.json`](../../scripts/portfolio_municipios.json) — **não use mais `cf[32400]`**, desatualizado desde a redistribuição de 10/2026. Não deduza pela vertical de origem. Município fora do mapa entra como **Médias** e na seção `Municípios fora do mapa`.
+- **Assunto:** `[Triagem Serviços] Resumo do dia YYYY-MM-DD - Pequenas Contas` ou `[Triagem Serviços] Resumo do dia YYYY-MM-DD - Médias Contas`
+- **Para (Pequenas Contas):** `arimanoel.gomes@betha.com.br` (coordenador Ari)
+- **Para (Médias Contas):** `emanuel.alexandre@betha.com.br`, `francieli.buzzi@betha.com.br`, `thiago.fantinelli@betha.com.br`
+- **Corpo: gerado por script, não escrito à mão.** Use `../../scripts/triagem_email.py`. Monte um dict com os blocos do e-mail e chame `gerar_email(dados)` para o `htmlBody` e `gerar_texto_alternativo(dados)` para o `body`. O esquema completo está no docstring do script.
+  - **Blocos disponíveis:** `cards` (linha de totais), `secao` (título), `tabela` (com `destaque` para realçar linhas), `alerta` (caixa vermelha), `nota` (caixa âmbar), `paragrafo`, `lista`.
+  - **Conteúdo esperado:** cartões de totais (fila / comentados em verde / sem comentário em âmbar / delta em cinza); tabela dos comentados (Chamado, Assunto, Execução com o turno, Baseline histórico); tabela "Chamados x Backlog de Desenvolvimento" quando houver; tabela dos sem comentário (Chamado, Assunto, Motivo); lista de Observações; `logs` no rodapé.
+  - **Atalho de escrita:** em qualquer texto, `[BTHSC-123456]` vira link automático para o Jira; `<b>`, `<i>` e `<br>` passam direto. Não escreva `<a href>` à mão para chamados. **Sempre a chave completa entre colchetes** — `361539` solto não vira link.
+  - ⚠️ **ACENTUAÇÃO: o e-mail é escrito em português correto, COM acentos.** A regra de corpo sem acentuação vale **apenas para os comentários do Jira**, onde existe limitação de encoding do banco. No e-mail não há essa limitação. Em 14 e 15/10/2026 os e-mails saíram inteiros sem acento porque essa regra foi aplicada no lugar errado; o gerador agora **recusa** o e-mail quando detecta 3 ou mais palavras conhecidas sem acento.
+  - **As restrições do Gmail agora são verificadas pelo script e não precisam ser lembradas a cada execução** — `background-color` + `bgcolor`, sem `border-radius`, sem CDATA, sem caracteres fora do BMP. Se alguma for violada, `gerar_email` levanta `HtmlInvalido` e **não devolve HTML**: corrija os dados em vez de contornar a validação.
 
 **Envio (automação do coordenador):** a conta do Ari tem automação que **envia automaticamente os rascunhos** (polling ~5 min). Logo: **criar rascunho = enviar email**. Regras decorrentes:
 
 - Usar SOMENTE `create_draft` — nunca envio direto.
-- **Máximo 1 rascunho por dia** para a vertical Serviços. Nunca recriar/atualizar o rascunho do dia (cada recriação dispara novo envio).
+- **Máximo 1 rascunho POR PORTFÓLIO por dia** — ou seja, no máximo 2 rascunhos diários nesta vertical (um Pequenas, um Médias). Nunca recriar/atualizar um rascunho já criado no dia (cada recriação dispara novo envio). Registre no log o `draftId` de cada rascunho criado, para que a execução seguinte saiba que a cota do dia foi consumida.
 - Conteúdo **final e revisado** no momento da criação.
 
 ## Passo 8: Registro do Consumo de Tokens (Auditoria de Custo)

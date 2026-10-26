@@ -2,6 +2,8 @@
 
 > **Parte do monorepo `triagem_filas_betha`.** Scripts auxiliares e docs gerais estão na raiz (`../../scripts/`, `../../docs/`). Esta pasta contém apenas o que é específico da vertical Pessoal: CLAUDE.md (este arquivo), docs/, logs/, outputs/.
 
+> **Reconciliado com a execução real em 2026-08-31.** Este arquivo tinha ficado ~2,5 meses sem atualização enquanto a operação evoluía nos logs diários. Foram alinhados: **(1)** o recorte da JQL do Passo 1, que passou de lista fixa de municípios / só Pequenas Contas para o campo "Portfólio de Atendimento" com **Pequenas + Médias Contas**; **(2)** o rascunho de email, que hoje é **dividido por portfólio**, com destinatários diferentes; **(3)** o markup do comentário, que é **wiki markup do Jira em ASCII**, não markdown. Quando a prática divergir deste arquivo de novo, a fonte de verdade são os `logs/YYYY-MM-DD.md` — e vale reconciliar aqui.
+
 ## Repositório Git
 
 **URL:** https://github.com/arimanoelgomes-ctrl/triagem_filas_betha
@@ -57,8 +59,19 @@ Você **NUNCA** deve inventar, supor ou criar uma possível solução por conta 
 Utilize a ferramenta de busca JQL do seu MCP `jira-atendimento` para listar os chamados atuais da fila de triagem. Execute exatamente a query abaixo:
 
 ```jql
-Vertical in (Pessoal) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações) AND status not in ("Produto contratado") AND resolution = Unresolved AND (Município in ("Abdon Batista", Agrolândia, "Anita Garibaldi", Angelina, Anchieta, "Balneário Arroio do Silva", "Balneário Barra do Sul", "Balneário Camboriú", "Balneário Piçarras", Bandeirante, "Barra Bonita", "Barra Velha", "Bela Vista do Toldo", Belmonte, "Benedito Novo", Brunópolis, Caçador, Calmon, "Campo Alegre", "Capão Alto", Chapecó, Concórdia, "Dona Emma", "Erval Velho", Ermo, "Frei Rogério", Iraceminha, Imbuia, Ipira, Ipuaçu, Itá, Itajaí, Jupiá, Lacerdópolis, "Lajeado Grande", "Leoberto Leal", "Lindóia do Sul", "Luiz Alves", Luzerna, Mafra, Massaranduba, Meleiro, Modelo, "Morro da Fumaça", "Morro Grande", Penha, Peritiba, "Pescaria Brava", Pomerode, "Praia Grande", "Rio do Sul", "Rio Fortuna", "Rio Rufino", Saltinho, "Santa Terezinha", "São Bernardino", "São Bonifácio", "São Cristovão do Sul", "São João do Oeste", "São José do Cedro", "São Martinho", "São Miguel da Boa Vista", "São Pedro de Alcântara", Tangará, "Treze de Maio", Tigrinhos, Timbó, Treviso, Videira) OR Município in ("Campos Novos") AND Entidade = "CIMPLASC - CONSORCIO INTERMUNICIPAL DE SANEAMENTO BASICO MEIO AMBIENTE ATENCAO A SANIDADE DOS PRODUTOS DE ORIGEM AGROPECUARIA SEGURANCA ALIMENTAR - Campos Novos/SC") AND issuetype not in (Implantação) AND issuetype = Dúvida ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
+Vertical in (Pessoal) AND "Equipe responsável" not in (Revenda, "Ferramenta de Conversão", Parceiros, Produto, "Produto extensões", Tribunais, Integrações) AND status not in ("Produto contratado") AND resolution = Unresolved AND <<RECORTE_CARTEIRA>> AND issuetype not in (Implantação) AND issuetype = Dúvida ORDER BY cf[24813] ASC, status DESC, cf[21500] DESC, issuetype ASC, Município ASC, cf[10300] ASC, cf[22902] ASC, assignee DESC
 ```
+
+> **Recorte reconciliado em 2026-08-31.** Até 06/2026 esta JQL usava lista fixa de municípios de SC (+ entidade CIMPLASC em Campos Novos). A execução real passou a usar o campo **"Portfólio de Atendimento"** com os dois recortes — **Pequenas Contas + Médias Contas** —, e é essa a versão acima. A JQL foi validada em 2026-08-31 (retorno: 47 chamados), com contagem coerente com os logs de agosto. O `ORDER BY` acima é o de prioridade de triagem; nas execuções diárias reordena-se por `created DESC` apenas para isolar o delta novo desde a run anterior.
+
+> **RECORTE DE CARTEIRA ALTERADO EM 2026-10-26 (decisão do coordenador).** O recorte **não é mais** o campo "Portfólio de Atendimento" (`cf[32400]`) — ele ficou desatualizado após a redistribuição de clientes. O recorte agora é por **`Município`** (`cf[10331]`), a partir da planilha *Organização equipes - MC* / aba *Clientes Pequenas e Médias Contas*: **gestão Arimanoel = Pequenas Contas; Thiago (Oeste), Francieli (Norte) e Emanuel (Sul) = Médias Contas**. Onde as JQLs acima trazem `<<RECORTE_CARTEIRA>>`, **expanda literalmente o conteúdo de [`../../scripts/recorte_carteira.jql`](../../scripts/recorte_carteira.jql)** (126 municípios + a entidade CIMPLASC). O mapa canônico, com a divisão por gestão, está em [`../../scripts/portfolio_municipios.json`](../../scripts/portfolio_municipios.json).
+>
+> ⚠️ **`Município` é campo de TEXTO LIVRE, não lista de valores.** O Jira aceita qualquer string dentro de `in (...)` **sem devolver erro** — grafia errada simplesmente retorna menos chamados. Em 26/10 a planilha grafava `ANTONIO CARLOS` e o Jira usa `Antônio Carlos`: um circunflexo apagava **3 chamados** da fila da Arrecadação, silenciosamente. Nunca confie num `in (...)` que "rodou sem erro"; confira sempre a contagem.
+>
+> 🛡️ **Guarda-corpo obrigatório em todo turno.** Rode a mesma JQL trocando `Município in (...)` por `Município not in (...)` (mantendo os demais filtros). O que voltar é **município fora do mapa**: **triar normalmente como Médias Contas** e listar em seção própria `Municípios fora do mapa` no log e no e-mail. Exceção: **São Miguel do Oeste** é atendido por revenda parceira e fica fora da fila **sem alerta**.
+>
+> **Exceção por entidade — CIMPLASC.** Em Campos Novos há 73 chamados abertos e **apenas o do consórcio CIMPLASC é nosso** (os demais são `Parceiro de Negócios`). Por isso a inclusão é pela **entidade**, nunca pelo município — incluir "Campos Novos" na lista traria 72 chamados indevidos.
+
 
 ## Passo 2: Filtro de Idempotência e Status (Ignorar Analisados/Fechados)
 
@@ -69,6 +82,14 @@ Para cada chamado retornado na lista, antes de buscar soluções:
 **REGRA DE OURO 2 — Status encerrado:** Verifique o status atual do chamado. Se estiver em `Fechado`, `Encerrado`, `Resolvido`, `Concluído`, `Triagem encerrada`, `Cancelado` ou `Reprovada`, **ignore** — o Jira não aceita comentários nesses status e a triagem deixou de ser útil. Embora a JQL filtre `resolution = Unresolved` no Passo 1, o estado pode mudar entre a coleta e o momento da postagem.
 
 **Otimização:** para ambos os filtros, em vez de chamar `get_issue` para cada chamado da fila, você pode usar **uma única chamada** ao `search_by_text` com `text: "IA-TRIAGEM-AUTOMATICA"` e `additionalJql: "project = BTHSC AND resolution = Unresolved"` para identificar quais chamados da fila atual já têm a tag.
+
+**Variante validada em 2026-08-31 (preferida para o delta):** quando o delta do dia é pequeno (poucos chamados novos), o caminho mais direto e barato é uma única JQL restrita às chaves do delta:
+
+```jql
+key in (BTHSC-XXXX, BTHSC-YYYY, ...) AND text ~ "IA-TRIAGEM-AUTOMATICA"
+```
+
+Retorno vazio = nenhum do delta está tagueado, e isso já satisfaz a re-verificação just-in-time exigida no Passo 4 se feita imediatamente antes das postagens. **Não use `AND NOT text ~ ...` para listar os não-tagueados:** a negação de busca full-text no Jira retorna vazio de forma silenciosa e dá a falsa impressão de que não há pendências.
 
 ## Passo 3: Análise e Busca de Soluções (Regra de Negócio)
 
@@ -103,21 +124,23 @@ O seu comentário interno deve seguir estritamente este formato em Markdown (omi
 
 ```markdown
 [#IA-TRIAGEM-AUTOMATICA#]
-**Triagem Automática de Soluções**
+*Triagem Automatica de Solucoes*
 Analisei este chamado em nossa base de conhecimento.
 
-**Possíveis Soluções (Extraídas do Jira):**
+*Possiveis Solucoes (Extraidas do Jira):*
 
 - [Descreva a solução 1 focando na ação a ser tomada. Preserve a profundidade técnica, incluindo queries, scripts, caminhos de configuração ou trechos de log relevantes se existirem]. Baseado no chamado: [INSERIR CHAVE DO CHAMADO HISTÓRICO, ex: BTHSC-1234].
 
 - [Descreva a solução 2, se houver, com o mesmo rigor técnico]. Baseado no chamado: [INSERIR CHAVE DO CHAMADO HISTÓRICO].
 
-**Análise Complementar (Busca Externa):**
+*Analise Complementar (Busca Externa):*
 
 [UTILIZE ESTA SEÇÃO APENAS SE HOUVER LEIS/REGRAS DE NEGÓCIO NÃO ENCONTRADAS NO JIRA]. Atenção: As informações abaixo foram buscadas externamente e não constam no histórico do Jira. [Descreva a análise técnica e legal aplicável].
 
-**Nota para o analista:** Por favor, verifique tecnicamente se a sugestão se aplica integralmente ao cenário atual deste município antes de repassar ao cliente.
+*Nota para o analista:* Por favor, verifique tecnicamente se a sugestão se aplica integralmente ao cenário atual deste município antes de repassar ao cliente.
 ```
+
+> **Convenção de markup vigente (reconciliada em 2026-08-31).** O template acima está em **wiki markup do Jira** (`*negrito*` com asterisco simples), que é o que o Jira renderiza — markdown `**negrito**` sai como texto literal e foi abandonado ao longo de 08/2026. Além disso, a convenção adotada na prática é escrever o corpo do comentário **sem acentuação** (ASCII): a restrição real do banco é apenas quanto a caracteres fora do BMP, mas remover a acentuação virou salvaguarda padrão do monorepo depois do incidente de encoding. Mantenha os dois hábitos — wiki markup e ASCII — para ficar consistente com os comentários já postados.
 
 **Regra de Exceção:** Se você não encontrar nenhuma solução histórica confiável E não houver leis/regras para analisar externamente, **não gere comentário para o chamado**. Apenas registre no log o motivo de não comentar.
 
@@ -142,27 +165,37 @@ Ao final da execução diária, gere obrigatoriamente um arquivo de log em `logs
 
 ⚠️ **Esta etapa é responsabilidade exclusiva da execução da TARDE (`triagem-monorepo-tarde`).** A execução da manhã NÃO deve criar rascunho de email.
 
-Na execução da tarde, **decida se cria o rascunho desta vertical**:
+Na execução da tarde, **decida quais rascunhos desta vertical serão criados**:
 
-- **CRIE** se a vertical Pessoal teve **pelo menos 1 comentário postado** no dia (manhã + tarde, considerando o log do dia inteiro).
-- **NÃO CRIE** se a vertical não teve nenhum comentário postado no dia. Registre no log que o rascunho foi suprimido.
+O rascunho é **dividido por portfólio** — os dois recortes têm destinatários diferentes e são avaliados de forma independente:
+
+- **CRIE o rascunho de Pequenas Contas** se houve **pelo menos 1 comentário postado no dia em chamado de Pequenas Contas** (manhã + tarde).
+- **CRIE o rascunho de Médias Contas** se houve **pelo menos 1 comentário postado no dia em chamado de Médias Contas** (manhã + tarde).
+- **NÃO CRIE** o rascunho do recorte que ficou sem nenhum comentário no dia. Registre no log que foi suprimido.
+- Classifique cada chamado comentado pelo **`Município`** (`cf[10331]`) confrontado com [`../../scripts/portfolio_municipios.json`](../../scripts/portfolio_municipios.json): município em `pequenas_contas` -> rascunho de Pequenas; em `medias_contas` -> rascunho de Médias. Consulte o campo no Jira (ex.: `key in (...)` com `extraFields: ["customfield_10331"]`) — **não deduza pelo analista, e não use mais `cf[32400]`**, que está desatualizado desde a redistribuição de 10/2026. Chamado de município fora do mapa entra como **Médias** e vai também na seção `Municípios fora do mapa`.
 
 Quando criar:
 
-- **Assunto:** `[Triagem Pessoal] Resumo do dia YYYY-MM-DD`
-- **Para:** `arimanoel.gomes@betha.com.br` (coordenador Ari)
+- **Assunto:** `[Triagem Pessoal] Resumo do dia YYYY-MM-DD - Pequenas Contas` ou `[Triagem Pessoal] Resumo do dia YYYY-MM-DD - Médias Contas`
+- **Para (Pequenas Contas):** `arimanoel.gomes@betha.com.br` (coordenador Ari)
+- **Para (Médias Contas):** `emanuel.alexandre@betha.com.br`, `francieli.buzzi@betha.com.br`, `thiago.fantinelli@betha.com.br`
 - **Corpo:** resumo CONSOLIDADO do dia inteiro (manhã + tarde) — totais combinados, top 5 chamados comentados com links e baseline histórico utilizado, top 3 sem comentário que merecem atenção, link para o log completo (`verticais/pessoal/logs/<DATA>.md`). Identifique no corpo quais comentários vieram da execução da manhã e quais da tarde.
 - **Seção adicional obrigatória — "Chamados com item já cadastrado no desenvolvimento":** liste os casos identificados no Passo 3.1 (do dia e, se ainda relevantes, de dias anteriores não resolvidos), no formato: chamado (chave + link + tipo + status) → Característica/Story correspondente no jira-desenv (chave + status + responsável). Se nenhum caso foi identificado no dia, omita a seção (não escreva "nenhum caso").
-- **Formato (padrão aprovado pelo coordenador em 2026-06-11):** corpo em **HTML** (`htmlBody` do MCP do Gmail), layout executivo com estilos inline (compatibilidade Gmail): (1) cabeçalho em faixa azul `#1a5276` com nome da vertical e data; (2) linha de 4 cartões de totais (fila / comentados em verde `#1e8449` / sem comentário em âmbar `#b7950b` / ignorados em cinza); (3) tabelas com bordas `#d5dbdb` e cabeçalho `#f4f6f6` para: chamados comentados (colunas Chamado com link, Assunto, Execução com selo verde "Tarde", Baseline histórico) e sem comentário (Chamado, Assunto, Motivo); (4) seção Observações em lista; (5) link para o log e rodapé discreto "gerado automaticamente — revisar antes de circular". Fornecer também `body` em texto simples (resumo de 1 a 2 linhas + link do log) como fallback. Sem emojis. **Restrição de markup (lição de 2026-06-11):** o Gmail descarta a propriedade CSS abreviada `background:` — usar SEMPRE `background-color:` + atributo `bgcolor` nas células, e estruturar o cabeçalho e o container como `<table>`/`<td>` (não `<div>` com fundo). Sem `border-radius` no cabeçalho.
+- **Corpo: gerado por script, não escrito à mão.** Use `../../scripts/triagem_email.py`. Monte um dict com os blocos do e-mail e chame `gerar_email(dados)` para o `htmlBody` e `gerar_texto_alternativo(dados)` para o `body`. O esquema completo está no docstring do script.
+  - **Blocos disponíveis:** `cards` (linha de totais), `secao` (título), `tabela` (com `destaque` para realçar linhas), `alerta` (caixa vermelha), `nota` (caixa âmbar), `paragrafo`, `lista`.
+  - **Conteúdo esperado:** cartões de totais (fila / comentados em verde / sem comentário em âmbar / delta em cinza); tabela dos comentados (Chamado, Assunto, Execução com o turno, Baseline histórico); tabela "Chamados x Backlog de Desenvolvimento" quando houver; tabela dos sem comentário (Chamado, Assunto, Motivo); lista de Observações; `logs` no rodapé.
+  - **Atalho de escrita:** em qualquer texto, `[BTHSC-123456]` vira link automático para o Jira; `<b>`, `<i>` e `<br>` passam direto. Não escreva `<a href>` à mão para chamados. **Sempre a chave completa entre colchetes** — `361539` solto não vira link.
+  - ⚠️ **ACENTUAÇÃO: o e-mail é escrito em português correto, COM acentos.** A regra de corpo sem acentuação vale **apenas para os comentários do Jira**, onde existe limitação de encoding do banco. No e-mail não há essa limitação. Em 14 e 15/10/2026 os e-mails saíram inteiros sem acento porque essa regra foi aplicada no lugar errado; o gerador agora **recusa** o e-mail quando detecta 3 ou mais palavras conhecidas sem acento.
+  - **As restrições do Gmail agora são verificadas pelo script e não precisam ser lembradas a cada execução** — `background-color` + `bgcolor`, sem `border-radius`, sem CDATA, sem caracteres fora do BMP. Se alguma for violada, `gerar_email` levanta `HtmlInvalido` e **não devolve HTML**: corrija os dados em vez de contornar a validação.
 
 **Envio (atualizado em 2026-06-11 — automação confirmada pelo coordenador):** a conta Gmail do coordenador possui uma **automação que envia automaticamente os rascunhos da triagem** (polling de ~5 minutos). Na prática, **criar o rascunho = enviar o email** — não existe janela de revisão manual. Regras decorrentes:
 
 - A triagem usa SOMENTE `create_draft` — **nunca** ação de envio direto (a automação cuida da entrega).
-- **Máximo 1 rascunho por vertical por dia.** Nunca recriar/atualizar o rascunho do dia (cada recriação gera novo envio — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador.
+- **Máximo 1 rascunho por vertical POR PORTFÓLIO por dia** — ou seja, no máximo 2 rascunhos diários nesta vertical (um Pequenas, um Médias). Nunca recriar/atualizar um rascunho já criado no dia (cada recriação gera novo envio — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador. Registre no log o `draftId` de cada rascunho criado, para que a execução seguinte saiba que a cota do dia foi consumida.
 - O conteúdo deve estar **final e revisado no momento da criação**.
 - É normal a pasta de rascunhos ficar vazia minutos depois (o rascunho vira email enviado).
 
-**Este rascunho é EXCLUSIVO da vertical Pessoal** — não consolidar com outras verticais (Arrecadação e Saúde têm seus próprios rascunhos separados, e Saúde vai para destinatário diferente).
+**Estes rascunhos são EXCLUSIVOS da vertical Pessoal** — não consolidar com outras verticais nem misturar os dois portfólios num único email. Cada vertical tem seus próprios rascunhos, e a Saúde é a única sem split de portfólio (rascunho único para a Maitê).
 
 ## Passo 7: Registro do Consumo de Tokens (Auditoria de Custo)
 

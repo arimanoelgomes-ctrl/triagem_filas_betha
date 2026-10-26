@@ -2,6 +2,8 @@
 
 > **Parte do monorepo `triagem_filas_betha`.** Scripts auxiliares e docs gerais estão na raiz (`../../scripts/`, `../../docs/`). Esta pasta contém apenas o que é específico da vertical Saúde: CLAUDE.md (este arquivo), docs/, logs/, outputs/.
 
+> **Reconciliado com a execução real em 2026-08-31.** Este arquivo tinha ficado ~2,5 meses sem atualização enquanto a operação evoluía nos logs diários. Foram alinhados: **(1)** o markup do comentário, que é **wiki markup do Jira em ASCII**, não markdown; **(2)** o registro explícito de que a **Saúde é a única vertical SEM split de portfólio** no rascunho de email — as demais passaram a dividir Pequenas/Médias, e essa exceção precisa ficar clara para não ser replicada aqui por engano. **(3)** o registro explícito de que a **Saúde atende TODOS os clientes** — a JQL do Passo 1 é por categoria de projeto e **não tem recorte de município nem de "Portfólio de Atendimento"**, ao contrário das demais verticais, que em 2026-08-31 passaram a recortar por Pequenas + Médias Contas. Essa exceção vale também para o bloco `Vertical in (Saúde)` da JQL 1.2 da vertical Serviços, que ficou sem recorte pelo mesmo motivo. A JQL do Passo 1 foi verificada nesta data e segue válida. Quando a prática divergir deste arquivo de novo, a fonte de verdade são os `logs/YYYY-MM-DD.md`.
+
 ## Repositório Git
 
 **URL:** https://github.com/arimanoelgomes-ctrl/triagem_filas_betha
@@ -69,6 +71,14 @@ Para cada chamado retornado na lista, antes de buscar soluções:
 
 **Otimização:** para o filtro de idempotência, em vez de chamar `get_issue` para cada chamado da fila, você pode usar **uma única chamada** ao `search_by_text` com `text: "IA-TRIAGEM-AUTOMATICA"` e `additionalJql: "project = BTHSC AND resolution = Unresolved"` para identificar quais chamados da fila atual já têm a tag.
 
+**Variante validada em 2026-08-31 (preferida para o delta):** quando o delta do dia é pequeno (poucos chamados novos), o caminho mais direto e barato é uma única JQL restrita às chaves do delta:
+
+```jql
+key in (BTHSC-XXXX, BTHSC-YYYY, ...) AND text ~ "IA-TRIAGEM-AUTOMATICA"
+```
+
+Retorno vazio = nenhum do delta está tagueado, e isso já satisfaz a re-verificação just-in-time exigida no Passo 4 se feita imediatamente antes das postagens. **Não use `AND NOT text ~ ...` para listar os não-tagueados:** a negação de busca full-text no Jira retorna vazio de forma silenciosa e dá a falsa impressão de que não há pendências.
+
 ## Passo 3: Análise e Busca de Soluções (Regra de Negócio)
 
 Para os chamados que passarem no filtro do Passo 2, realize o seguinte processo:
@@ -104,21 +114,23 @@ O seu comentário interno deve seguir estritamente este formato em Markdown (omi
 
 ```markdown
 [#IA-TRIAGEM-AUTOMATICA#]
-**Triagem Automática de Soluções**
+*Triagem Automatica de Solucoes*
 Analisei este chamado em nossa base de conhecimento.
 
-**Possíveis Soluções (Extraídas do Jira):**
+*Possiveis Solucoes (Extraidas do Jira):*
 
 - [Descreva a solução 1 focando na ação a ser tomada. Preserve a profundidade técnica, incluindo queries, scripts, caminhos de configuração, regras de procedimentos SUS ou trechos de log relevantes se existirem]. Baseado no chamado: [INSERIR CHAVE DO CHAMADO HISTÓRICO, ex: BTHSC-1234].
 
 - [Descreva a solução 2, se houver, com o mesmo rigor técnico]. Baseado no chamado: [INSERIR CHAVE DO CHAMADO HISTÓRICO].
 
-**Análise Complementar (Busca Externa):**
+*Analise Complementar (Busca Externa):*
 
 [UTILIZE ESTA SEÇÃO APENAS SE HOUVER LEIS/PORTARIAS/REGRAS DO SUS NÃO ENCONTRADAS NO JIRA]. Atenção: As informações abaixo foram buscadas externamente e não constam no histórico do Jira. [Descreva a análise técnica e legal aplicável].
 
-**Nota para o analista:** Por favor, verifique tecnicamente se a sugestão se aplica integralmente ao cenário atual deste município antes de repassar ao cliente.
+*Nota para o analista:* Por favor, verifique tecnicamente se a sugestão se aplica integralmente ao cenário atual deste município antes de repassar ao cliente.
 ```
+
+> **Convenção de markup vigente (reconciliada em 2026-08-31).** O template acima está em **wiki markup do Jira** (`*negrito*` com asterisco simples), que é o que o Jira renderiza — markdown `**negrito**` sai como texto literal e foi abandonado ao longo de 08/2026. Além disso, a convenção adotada na prática é escrever o corpo do comentário **sem acentuação** (ASCII): a restrição real do banco é apenas quanto a caracteres fora do BMP, mas remover a acentuação virou salvaguarda padrão do monorepo depois do incidente de encoding. Mantenha os dois hábitos — wiki markup e ASCII — para ficar consistente com os comentários já postados.
 
 **Regra de Exceção:** Se você não encontrar nenhuma solução histórica confiável E não houver leis/regras para analisar externamente, **não gere comentário para o chamado**. Apenas registre no log o motivo de não comentar.
 
@@ -146,6 +158,8 @@ Ao final da execução diária, gere obrigatoriamente um arquivo de log em `logs
 
 Na execução da tarde, **decida se cria o rascunho desta vertical**:
 
+> ⚠️ **Saúde é a ÚNICA vertical SEM split por portfólio.** As demais verticais do monorepo dividem o rascunho em Pequenas Contas (para o Ari) e Médias Contas (para emanuel.alexandre / francieli.buzzi / thiago.fantinelli). Aqui é **um único rascunho**, para a Maitê, cobrindo todos os chamados do dia independentemente do portfólio. Não replicar o split das outras verticais nesta.
+
 - **CRIE** se a vertical Saúde teve **pelo menos 1 comentário postado** no dia (manhã + tarde, considerando o log do dia inteiro).
 - **NÃO CRIE** se a vertical não teve nenhum comentário postado no dia. Registre no log que o rascunho foi suprimido.
 
@@ -155,16 +169,21 @@ Quando criar:
 - **Para:** `maite.passos@betha.com.br` (Maitê — não o Ari)
 - **Corpo:** resumo CONSOLIDADO do dia inteiro (manhã + tarde) — totais combinados, top 5 chamados comentados com links e baseline histórico utilizado, top 3 sem comentário que merecem atenção, link para o log completo (`verticais/saude/logs/<DATA>.md`). Identifique no corpo quais comentários vieram da execução da manhã e quais da tarde.
 - **Seção adicional obrigatória — "Chamados com item já cadastrado no desenvolvimento":** liste os casos identificados no Passo 3.1 (do dia e, se ainda relevantes, de dias anteriores não resolvidos), no formato: chamado (chave + link + tipo + status) → Característica/Story correspondente no jira-desenv (chave + status + responsável). Inclui tanto melhorias reprovadas/aguardando avaliação quanto chamados de suporte em qualquer status cuja necessidade já tenha item no backlog. Se nenhum caso foi identificado no dia, omita a seção (não escreva "nenhum caso").
-- **Formato (padrão aprovado pelo coordenador em 2026-06-11):** corpo em **HTML** (`htmlBody` do MCP do Gmail), layout executivo com estilos inline (compatibilidade Gmail): (1) cabeçalho em faixa azul `#1a5276` com nome da vertical e data + saudação "Olá, Maitê!"; (2) linha de 4 cartões de totais (fila / comentados em verde `#1e8449` / sem comentário em âmbar `#b7950b` / ignorados em cinza); (3) tabelas com bordas `#d5dbdb` e cabeçalho `#f4f6f6` para: chamados comentados (Chamado com link, Assunto, Execução com selo verde "Tarde", Baseline histórico), "Chamados com item já cadastrado no desenvolvimento" (Chamado + tipo/status, Item no desenvolvimento + responsável, Status/Sugestão) e sem comentário (Chamado, Assunto, Motivo); (4) seção Observações em lista; (5) link para o log e rodapé discreto "gerado automaticamente — revisar antes de circular". Fornecer também `body` em texto simples (resumo de 1 a 2 linhas + link do log) como fallback. Sem emojis. **Restrição de markup (lição de 2026-06-11):** o Gmail descarta a propriedade CSS abreviada `background:` — usar SEMPRE `background-color:` + atributo `bgcolor` nas células, e estruturar o cabeçalho e o container como `<table>`/`<td>` (não `<div>` com fundo). Sem `border-radius` no cabeçalho.
+- **Corpo: gerado por script, não escrito à mão.** Use `../../scripts/triagem_email.py`. Monte um dict com os blocos do e-mail e chame `gerar_email(dados)` para o `htmlBody` e `gerar_texto_alternativo(dados)` para o `body`. O esquema completo está no docstring do script.
+  - **Blocos disponíveis:** `cards` (linha de totais), `secao` (título), `tabela` (com `destaque` para realçar linhas), `alerta` (caixa vermelha), `nota` (caixa âmbar), `paragrafo`, `lista`.
+  - **Conteúdo esperado:** cartões de totais (fila / comentados em verde / sem comentário em âmbar / delta em cinza); tabela dos comentados (Chamado, Assunto, Execução com o turno, Baseline histórico); tabela "Chamados x Backlog de Desenvolvimento" quando houver; tabela dos sem comentário (Chamado, Assunto, Motivo); lista de Observações; `logs` no rodapé.
+  - **Atalho de escrita:** em qualquer texto, `[BTHSC-123456]` vira link automático para o Jira; `<b>`, `<i>` e `<br>` passam direto. Não escreva `<a href>` à mão para chamados. **Sempre a chave completa entre colchetes** — `361539` solto não vira link.
+  - ⚠️ **ACENTUAÇÃO: o e-mail é escrito em português correto, COM acentos.** A regra de corpo sem acentuação vale **apenas para os comentários do Jira**, onde existe limitação de encoding do banco. No e-mail não há essa limitação. Em 14 e 15/10/2026 os e-mails saíram inteiros sem acento porque essa regra foi aplicada no lugar errado; o gerador agora **recusa** o e-mail quando detecta 3 ou mais palavras conhecidas sem acento.
+  - **As restrições do Gmail agora são verificadas pelo script e não precisam ser lembradas a cada execução** — `background-color` + `bgcolor`, sem `border-radius`, sem CDATA, sem caracteres fora do BMP. Se alguma for violada, `gerar_email` levanta `HtmlInvalido` e **não devolve HTML**: corrija os dados em vez de contornar a validação.
 
 **Envio (atualizado em 2026-06-11 — automação confirmada pelo coordenador):** a conta Gmail do coordenador possui uma **automação que envia automaticamente os rascunhos da triagem** (polling de ~5 minutos). Na prática, **criar o rascunho = enviar o email diretamente à Maitê** — não existe janela de revisão manual. Regras decorrentes (com atenção redobrada nesta vertical, pois o destinatário é um terceiro):
 
 - A triagem usa SOMENTE `create_draft` — **nunca** ação de envio direto (a automação cuida da entrega).
-- **Máximo 1 rascunho por dia.** Nunca recriar/atualizar o rascunho do dia (cada recriação gera novo envio à Maitê — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador.
+- **Máximo 1 rascunho por dia** (esta vertical não tem split de portfólio, então é literalmente 1). Nunca recriar/atualizar o rascunho do dia (cada recriação gera novo envio à Maitê — causa das duplicidades de 11/06/2026), salvo pedido explícito do coordenador. Registre no log o `draftId` do rascunho criado, para que a execução seguinte saiba que a cota do dia foi consumida.
 - O conteúdo deve estar **final e revisado no momento da criação**.
 - É normal a pasta de rascunhos ficar vazia minutos depois (o rascunho vira email enviado).
 
-**Este rascunho é EXCLUSIVO da vertical Saúde** — não consolidar com Arrecadação e Pessoal (que vão para o Ari).
+**Este rascunho é EXCLUSIVO da vertical Saúde** — não consolidar com as demais verticais, que têm rascunhos próprios e divididos por portfólio (Pequenas para o Ari, Médias para emanuel.alexandre / francieli.buzzi / thiago.fantinelli).
 
 ## Passo 7: Registro do Consumo de Tokens (Auditoria de Custo)
 
